@@ -74,7 +74,9 @@ public:
 	void resizeToUniformCube();
 
 	void upload();
+	void uploadPoints();
 	void draw();
+	void drawPoints();
 	void calculateNormals();
 	glm::mat4 modelMatrix;
 public:

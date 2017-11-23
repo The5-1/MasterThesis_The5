@@ -114,33 +114,60 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BinaryTree.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="BST.h" />
     <ClInclude Include="FBO.h" />
     <ClInclude Include="HalfEdgeMesh.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="InstancedMesh.h" />
+    <ClInclude Include="KDTree.h" />
     <ClInclude Include="khronosComputeShader.h" />
     <ClInclude Include="loadPNG.h" />
     <ClInclude Include="marchingCubes.h" />
     <ClInclude Include="marchingCubesVolume.h" />
     <ClInclude Include="mathConstants.h" />
     <ClInclude Include="MeshResampler.h" />
+    <ClInclude Include="nanoflann.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="nanoflannHelper.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Skybox.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="SVO.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Texture.h" />
     <ClInclude Include="times.h" />
+    <ClInclude Include="tree.hh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="tree_util.hh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="trimesh_types.h" />
-    <ClInclude Include="VTKfile.h" />
+    <ClInclude Include="VTKfile.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="HalfEdgeMesh.cpp" />
     <ClCompile Include="helper.cpp" />
+    <ClCompile Include="KDTree.cpp" />
     <ClCompile Include="loadPNG.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="marchingCubesVolume.cpp" />
     <ClCompile Include="MeshResampler.cpp" />
+    <ClCompile Include="SVO.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="times.cpp" />
-    <ClCompile Include="VTKfile.cpp" />
+    <ClCompile Include="VTKfile.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

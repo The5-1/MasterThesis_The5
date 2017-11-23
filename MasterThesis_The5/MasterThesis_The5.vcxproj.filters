@@ -16,6 +16,15 @@
     <Filter Include="VTK">
       <UniqueIdentifier>{da3f86a5-d86f-4451-8178-4f3f08f188ca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SparseVoxelOctree">
+      <UniqueIdentifier>{3524c7b0-2043-4c1e-84dc-361135c86bae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NanoFLANN">
+      <UniqueIdentifier>{8472ac20-6df6-484a-82ee-c24c71aaeb95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tree-Structure">
+      <UniqueIdentifier>{171571d2-1ce7-44af-81df-e9f7cdb63755}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FBO.h">
@@ -69,6 +78,30 @@
     <ClInclude Include="VTKfile.h">
       <Filter>VTK</Filter>
     </ClInclude>
+    <ClInclude Include="nanoflann.h">
+      <Filter>NanoFLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="SVO.h">
+      <Filter>SparseVoxelOctree</Filter>
+    </ClInclude>
+    <ClInclude Include="nanoflannHelper.h">
+      <Filter>NanoFLANN</Filter>
+    </ClInclude>
+    <ClInclude Include="tree.hh">
+      <Filter>Tree-Structure</Filter>
+    </ClInclude>
+    <ClInclude Include="BST.h">
+      <Filter>Tree-Structure</Filter>
+    </ClInclude>
+    <ClInclude Include="tree_util.hh">
+      <Filter>Tree-Structure</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryTree.h">
+      <Filter>Tree-Structure</Filter>
+    </ClInclude>
+    <ClInclude Include="KDTree.h">
+      <Filter>Tree-Structure</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HalfEdgeMesh.cpp">
@@ -94,6 +127,15 @@
     </ClCompile>
     <ClCompile Include="VTKfile.cpp">
       <Filter>VTK</Filter>
+    </ClCompile>
+    <ClCompile Include="SVO.cpp">
+      <Filter>SparseVoxelOctree</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryTree.cpp">
+      <Filter>Tree-Structure</Filter>
+    </ClCompile>
+    <ClCompile Include="KDTree.cpp">
+      <Filter>Tree-Structure</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
