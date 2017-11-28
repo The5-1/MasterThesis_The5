@@ -25,6 +25,9 @@
     <Filter Include="Tree-Structure">
       <UniqueIdentifier>{171571d2-1ce7-44af-81df-e9f7cdb63755}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PC-Octree">
+      <UniqueIdentifier>{1e5df722-7fb4-47a8-ac11-ea30f7f80a34}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FBO.h">
@@ -102,6 +105,12 @@
     <ClInclude Include="KDTree.h">
       <Filter>Tree-Structure</Filter>
     </ClInclude>
+    <ClInclude Include="PC_Octree.h">
+      <Filter>PC-Octree</Filter>
+    </ClInclude>
+    <ClInclude Include="Node.h">
+      <Filter>PC-Octree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HalfEdgeMesh.cpp">
@@ -136,6 +145,9 @@
     </ClCompile>
     <ClCompile Include="KDTree.cpp">
       <Filter>Tree-Structure</Filter>
+    </ClCompile>
+    <ClCompile Include="PC_Octree.cpp">
+      <Filter>PC-Octree</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

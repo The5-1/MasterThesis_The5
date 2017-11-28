@@ -23,9 +23,10 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 
-#include "BinaryTree.h"
-#include "tree.hh"
-#include "tree_util.hh"
+#include "PC_Octree.h"
+
+//Octree
+PC_Octree* octree = 0;
 
 //Time
 Timer timer;
@@ -179,8 +180,24 @@ void delete_VTKfile(){
 }
 
 
+std::vector<glm::vec3> colorOctree = { glm::vec3(1.0f, 0.0f, 0.0f),
+										glm::vec3(0.5f, 0.5f, 0.0f),
+										glm::vec3(0.0f, 0.5f, 0.5f),
+										glm::vec3(1.0f, 1.0f, 1.0f),
+										glm::vec3(0.0f, 1.0f, 0.0f),
+										glm::vec3(0.0f, 0.0f, 0.0f),
+										glm::vec3(1.0f, 0.0f, 1.0f),
+										glm::vec3(0.0f, 0.0f, 1.0f),
+									};
+
+std::vector<glm::mat4> modelMatrixOctree;
 
 void init() {
+	/*****************************************************************
+	Error Messages :(
+	*****************************************************************/
+	std::cout << "ERROR main: We normals seem to be missplaced. GL_FRONT should be GL_BACK!!!" << std::endl;
+
 	/*****************************************************************
 	VTK-File
 	*****************************************************************/
@@ -188,15 +205,30 @@ void init() {
 	//upload_VTKfile();
 
 
+
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
 	teaPot = new simpleModel("C:/Dev/Assets/Teapot/teapot.obj", true);
-	//teaPot->upload();
 	teaPot->uploadPoints();
 
-	//kdtree_demo<float>(1000000);
+	std::cout << "TeaPot model: " << teaPot->vertices.size() << " vertices" << std::endl;
 
+	/*****************************************************************
+	obj-Models
+	*****************************************************************/
+	octree = new PC_Octree(teaPot->vertices, 0);
+
+	int counter = 0;
+	for (int i = 0; i < 8; i++) {
+		if (octree->root.bitMaskChildren[i] == 1) {
+			modelMatrixOctree.push_back(glm::mat4(1.0f));
+			octree->getAabbLeafUniforms(modelMatrixOctree[i], octree->root.children[i]);
+			counter++;
+		}
+	}
+
+	std::cout << "Main: modelMatrixOctree.size " << modelMatrixOctree.size() << std::endl;
 
 	/*****************************************************************
 	Skybox (Only for aesthetic reasons, can be deleted)
@@ -217,6 +249,11 @@ Scenes: Unit cube + Pointcloud
 ********************************************************************************************************* */
 void sponzaStandardScene(){
 	/* ********************************************
+	modelMatrix
+	**********************************************/
+	glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
+
+	/* ********************************************
 	Draw Skybox (Disable Culling, else we loose skybox!)
 	**********************************************/
 	glDisable(GL_CULL_FACE);
@@ -227,11 +264,35 @@ void sponzaStandardScene(){
 	skybox.Draw(skyboxShader);
 	skyboxShader.disable();
 
+
+	/* ********************************************
+	Octree
+	**********************************************/
+	basicShader.enable();
+
+	octree->getAabbUniforms(modelMatrix);
+
+	basicShader.uniform("modelMatrix", modelMatrix);
+	basicShader.uniform("viewMatrix", viewMatrix);
+	simpleSplatShader.uniform("projMatrix", projMatrix);
+
+	basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
+	//octree->drawBox();
+
+	for (int i = 0; i < modelMatrixOctree.size(); i++) {
+		basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
+		basicShader.uniform("col", colorOctree[i]);
+		octree->drawBox();
+	}
+
+
+	basicShader.disable();
+
+
 	/* ********************************************
 	Simple Splat
 	**********************************************/
 	if (backfaceCull) {
-		std::cout << "ERROR main: We normals seem to be missplaced. GL_FRONT should be GL_BACK!!!" << std::endl;
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
 	}
@@ -246,8 +307,8 @@ void sponzaStandardScene(){
 		glPolygonMode(GL_BACK, GL_LINE);
 	}
 	
-	glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
-
+	
+	modelMatrix = glm::scale(glm::vec3(1.0f));
 	simpleSplatShader.uniform("modelMatrix", modelMatrix);
 	simpleSplatShader.uniform("viewMatrix", viewMatrix);
 	simpleSplatShader.uniform("projMatrix", projMatrix);

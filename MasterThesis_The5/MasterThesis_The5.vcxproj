@@ -133,6 +133,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="nanoflannHelper.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="PC_Octree.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Skybox.h" />
     <ClInclude Include="stb_image.h" />
@@ -161,6 +163,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="marchingCubesVolume.cpp" />
     <ClCompile Include="MeshResampler.cpp" />
+    <ClCompile Include="PC_Octree.cpp" />
     <ClCompile Include="SVO.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
