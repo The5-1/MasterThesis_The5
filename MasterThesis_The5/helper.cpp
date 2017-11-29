@@ -996,3 +996,59 @@ void cameraSystem::Update(){
 
 	glutPostRedisplay();
 }
+
+void coordinateSystem::upload()
+{
+	this->vertices = { glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(10.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 10.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 10.0f)
+
+	};
+
+	this->indices = { 0, 1, 2, 3, 4, 5};
+
+	this->color = { glm::vec3(1.0f, 0.0f, 0.0f),
+					glm::vec3(1.0f, 0.0f, 0.0f),
+					glm::vec3(0.0f, 1.0f, 0.0f),
+					glm::vec3(0.0f, 1.0f, 0.0f),
+					glm::vec3(0.0f, 0.0f, 1.0f),
+					glm::vec3(0.0f, 0.0f, 1.0f) };
+
+	glGenBuffers(3, this->vbo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(float) * 3, this->vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, this->color.size() * sizeof(float) * 3, this->color.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(unsigned int), this->indices.data(), GL_STATIC_DRAW);
+}
+
+
+void coordinateSystem::draw()
+{
+	//Enable wireframe mode
+	glPolygonMode(GL_FRONT, GL_LINE);
+	glPolygonMode(GL_BACK, GL_LINE);
+
+	//Draw vertices as glQuads
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
+	glDrawElements(GL_LINE, this->indices.size(), GL_UNSIGNED_INT, 0);
+
+	//Disable wireframe mode
+	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_BACK, GL_FILL);
+}

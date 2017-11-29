@@ -63,6 +63,19 @@ protected:
 	GLuint vbo[2];
 };
 
+//CoordinateSystem
+class coordinateSystem
+{
+public:
+	void upload();
+	void draw();
+protected:
+	vector<unsigned int> indices;
+	vector<glm::vec3> vertices;
+	vector<glm::vec3> color;
+	GLuint vbo[3];
+};
+
 // very simple geometry
 class simpleModel
 {

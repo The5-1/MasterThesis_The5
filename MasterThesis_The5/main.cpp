@@ -60,13 +60,14 @@ char* posx = "C:/Dev/Assets/SkyboxTextures/Yokohama2/posx.jpg";
 Shader basicShader;
 Shader modelLoaderShader;
 Shader simpleSplatShader;
+Shader basicColorShader;
 
 //Skybox
 Shader skyboxShader;
 
 //Models
 simpleModel *teaPot = 0;
-HalfedgeMesh heMesh;
+coordinateSystem *coordSysstem = 0;
 
 // tweak bar
 TwBar *tweakBar;
@@ -217,8 +218,8 @@ void init() {
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
-	octree = new PC_Octree(teaPot->vertices, 0);
-
+	octree = new PC_Octree(teaPot->vertices, 1000);
+	
 	int counter = 0;
 	for (int i = 0; i < 8; i++) {
 		if (octree->root.bitMaskChildren[i] == 1) {
@@ -228,7 +229,14 @@ void init() {
 		}
 	}
 
-	std::cout << "Main: modelMatrixOctree.size " << modelMatrixOctree.size() << std::endl;
+	std::cout << "-> Main: modelMatrixOctree.size " << modelMatrixOctree.size() << std::endl;
+	std::cout << "-> Main: octree->modelMatrixLowestLeaf.size() " << octree->modelMatrixLowestLeaf.size() << std::endl;
+
+	/*****************************************************************
+	Coordinate System
+	*****************************************************************/
+	//coordSysstem->upload();
+
 
 	/*****************************************************************
 	Skybox (Only for aesthetic reasons, can be deleted)
@@ -239,6 +247,7 @@ void init() {
 
 void loadShader(bool init) {
 	basicShader = Shader("./shader/basic.vs.glsl", "./shader/basic.fs.glsl");
+	basicColorShader = Shader("./shader/basicColor.vs.glsl", "./shader/basicColor.fs.glsl");
 	modelLoaderShader = Shader("./shader/modelLoader.vs.glsl", "./shader/modelLoader.fs.glsl");
 	skyboxShader = Shader("./shader/skybox.vs.glsl", "./shader/skybox.fs.glsl");
 	simpleSplatShader = Shader("./shader/simpleSplat.vs.glsl", "./shader/simpleSplat.fs.glsl", "./shader/simpleSplat.gs.glsl");
@@ -264,6 +273,10 @@ void sponzaStandardScene(){
 	skybox.Draw(skyboxShader);
 	skyboxShader.disable();
 
+	/* ********************************************
+	Coordinate System
+	**********************************************/
+
 
 	/* ********************************************
 	Octree
@@ -274,17 +287,23 @@ void sponzaStandardScene(){
 
 	basicShader.uniform("modelMatrix", modelMatrix);
 	basicShader.uniform("viewMatrix", viewMatrix);
-	simpleSplatShader.uniform("projMatrix", projMatrix);
+	basicShader.uniform("projMatrix", projMatrix);
 
-	basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
+	//basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
 	//octree->drawBox();
 
-	for (int i = 0; i < modelMatrixOctree.size(); i++) {
+	/*for (int i = 0; i < modelMatrixOctree.size(); i++) {
 		basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
 		basicShader.uniform("col", colorOctree[i]);
 		octree->drawBox();
-	}
+	}*/
 
+
+	for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+		basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+		basicShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+		octree->drawBox();
+	}
 
 	basicShader.disable();
 
@@ -416,6 +435,8 @@ int main(int argc, char** argv) {
 
 	TwTerminate();
 
+
+	delete octree;
 	//delete_VTKfile();
 
 

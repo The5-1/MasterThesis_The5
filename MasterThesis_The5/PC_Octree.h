@@ -61,6 +61,7 @@ public:
 
 	//Max size
 	int maxVerticesPerQuad;
+
 	//Debug variables
 	std::vector<glm::mat4> modelMatrixLowestLeaf;
 
@@ -79,6 +80,7 @@ public:
 
 private:
 	void splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices);
+	void copyIndexVector(std::vector<int>& leafIndex, int offset);
 	void getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices);
 	void getAABB(glm::vec3 & min, glm::vec3& max, std::vector<glm::vec3>& _vertices, std::vector<int> _indices);
 	void uploadGlBox();
