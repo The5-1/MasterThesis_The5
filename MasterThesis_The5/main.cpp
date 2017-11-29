@@ -235,7 +235,8 @@ void init() {
 	/*****************************************************************
 	Coordinate System
 	*****************************************************************/
-	//coordSysstem->upload();
+	coordSysstem = new coordinateSystem();
+	coordSysstem->upload();
 
 
 	/*****************************************************************
@@ -276,7 +277,13 @@ void sponzaStandardScene(){
 	/* ********************************************
 	Coordinate System
 	**********************************************/
-
+	basicColorShader.enable();
+	modelMatrix = glm::scale(glm::vec3(1.0f));
+	basicColorShader.uniform("modelMatrix", modelMatrix);
+	basicColorShader.uniform("viewMatrix", viewMatrix);
+	basicColorShader.uniform("projMatrix", projMatrix);
+	coordSysstem->draw();
+	basicColorShader.disable();
 
 	/* ********************************************
 	Octree

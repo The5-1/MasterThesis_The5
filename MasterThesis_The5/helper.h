@@ -67,6 +67,7 @@ protected:
 class coordinateSystem
 {
 public:
+	coordinateSystem();
 	void upload();
 	void draw();
 protected:
