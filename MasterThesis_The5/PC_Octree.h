@@ -51,8 +51,10 @@ public:
 	//AABB
 	glm::vec3 minBoundingBox, maxBoundingBox;
 
-	//Index-List
+	//OpenGL PointCloud
+	GLuint vboPC[4];
 	std::vector<int> vertexIndexList;
+	std::vector<glm::vec3> vertexColorList; //For Debug, delete later
 
 	//OpenGL Box
 	GLuint vboBox[2];
@@ -64,18 +66,32 @@ public:
 
 	//Debug variables
 	std::vector<glm::mat4> modelMatrixLowestLeaf;
-
+	std::vector<glm::vec3> colorLowestLeaf;
+	std::vector<glm::vec3> colorOctree = { glm::vec3(1.0f, 0.0f, 0.0f),		//Red		
+											glm::vec3(1.0f, 0.6f, 0.0f),	//Orange
+											glm::vec3(0.0f, 0.5f, 0.5f),	//Teal
+											glm::vec3(1.0f, 1.0f, 1.0f),	//White		
+											glm::vec3(0.0f, 1.0f, 0.0f),	//Green		
+											glm::vec3(0.0f, 0.0f, 0.0f),	//Black
+											glm::vec3(1.0f, 0.0f, 1.0f),	//Purple
+											glm::vec3(0.0f, 0.0f, 1.0f),	//Blue	
+										};
+	
 
 //Functions
 public:
 	PC_Octree();
-	PC_Octree(std::vector<glm::vec3>& _vertices, int _maxVerticesPerQuad);
+	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, int _maxVerticesPerQuad);
 
 	~PC_Octree();
 
 	void getAabbUniforms(glm::mat4& _modelMatrix);
 	void getAabbLeafUniforms(glm::mat4 & _modelMatrix, Octree _leaf);
+
 	void drawBox();
+
+	void uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals);
+	void drawPointCloud();
 
 
 private:

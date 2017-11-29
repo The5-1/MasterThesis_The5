@@ -12,7 +12,7 @@ PC_Octree::PC_Octree()
 {
 }
 
-PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, int _maxVerticesPerQuad)
+PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, int _maxVerticesPerQuad)
 {
 	this->getAABB(minBoundingBox, maxBoundingBox, _vertices);
 
@@ -36,7 +36,11 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, int _maxVerticesPerQuad)
 		return;
 	}
 
+	this->vertexColorList.resize(_vertices.size());
+
 	this->splitLeaf(this->root, _vertices);
+
+	this->uploadPointCloud(_vertices, _normals);
 }
 
 PC_Octree::~PC_Octree()
@@ -86,6 +90,44 @@ void PC_Octree::drawBox()
 	glPolygonMode(GL_BACK, GL_FILL);
 }
 
+void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals)
+{
+	glGenBuffers(4, vboPC);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[0]);
+	glBufferData(GL_ARRAY_BUFFER, _vertices.size() * sizeof(float) * 3, _vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[1]);
+	glBufferData(GL_ARRAY_BUFFER, _normals.size() * sizeof(float) * 3, _normals.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[2]);
+	glBufferData(GL_ARRAY_BUFFER, vertexColorList.size() * sizeof(float) * 3, vertexColorList.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[3]);
+	glBufferData(GL_ARRAY_BUFFER, vertexIndexList.size() * sizeof(unsigned int), vertexIndexList.data(), GL_STATIC_DRAW);
+}
+
+void PC_Octree::drawPointCloud()
+{
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[2]);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboPC[3]);
+	glDrawElements(GL_POINTS, vertexIndexList.size(), GL_UNSIGNED_INT, 0);
+
+	//glDrawArrays(GL_POINTS, 0, vertexIndexList.size());
+
+}
+
 /* *********************************************************************************************************
 //Functions (private)
 ********************************************************************************************************* */
@@ -123,10 +165,12 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 	{
 		if (leaf.endVertices - leaf.beginVertices < this->maxVerticesPerQuad) {
+			std::cout << "Begin: " << leaf.beginVertices << ", end: " << leaf.endVertices << std::endl;
+			std::cout << "Color: (" << vertexColorList[leaf.beginVertices].x << "," << vertexColorList[leaf.beginVertices].y << "," << vertexColorList[leaf.beginVertices].z << ")" << std::endl;
 			glm::mat4 modelMatrix;
 			this->getAabbLeafUniforms(modelMatrix, leaf);
 			modelMatrixLowestLeaf.push_back(modelMatrix);
-			std::cout << "** Found leaf" << std::endl;
+			colorLowestLeaf.push_back(vertexColorList[this->vertexIndexList[leaf.beginVertices]]);
 			return;
 		}
 
@@ -136,40 +180,49 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 		glm::vec3 splitDiagonal = leaf.maxLeafBox - leaf.minLeafBox;
 
 
-		for (int i = leaf.beginVertices; i < leaf.endVertices; i++) {
+		for (int j = leaf.beginVertices; j < leaf.endVertices; j++) {
 
-			glm::vec3 currentVertex = _vertices[i];
+			glm::vec3 currentVertex = _vertices[ this->vertexIndexList[j] ];
+			int i = this->vertexIndexList[j];
 
 			if (currentVertex.x <= splittingPlain.x && currentVertex.y > splittingPlain.y && currentVertex.z <= splittingPlain.z) {
 				newLeaf000.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[0];
 			}
 
 			else if (currentVertex.x <= splittingPlain.x && currentVertex.y <= splittingPlain.y && currentVertex.z <= splittingPlain.z) {
 				newLeaf100.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[1];
 			}
 
 			else if (currentVertex.x > splittingPlain.x && currentVertex.y > splittingPlain.y && currentVertex.z <= splittingPlain.z) {
 				newLeaf010.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[2];
 			}
 
 			else if (currentVertex.x > splittingPlain.x && currentVertex.y <= splittingPlain.y && currentVertex.z <= splittingPlain.z) {
 				newLeaf110.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[3];
 			}
 
 			else if (currentVertex.x <= splittingPlain.x && currentVertex.y > splittingPlain.y && currentVertex.z > splittingPlain.z) {
 				newLeaf001.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[4];
 			}
 
 			else if (currentVertex.x <= splittingPlain.x && currentVertex.y <= splittingPlain.y && currentVertex.z > splittingPlain.z) {
 				newLeaf101.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[5];
 			}
 
 			else if (currentVertex.x > splittingPlain.x && currentVertex.y > splittingPlain.y && currentVertex.z > splittingPlain.z) {
 				newLeaf011.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[6];
 			}
 
 			else if (currentVertex.x > splittingPlain.x && currentVertex.y <= splittingPlain.y && currentVertex.z > splittingPlain.z) {
 				newLeaf111.push_back(i);
+				this->vertexColorList[i] = this->colorOctree[7];
 			}
 			else {
 				std::cout << "ERROR: PC_Octree.cpp could not place vertex into octree" << std::endl;
@@ -189,12 +242,12 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf000.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf000.size() << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf000.size() << std::endl;
 
-			std::cout << "Start Copy newLeaf000" << std::endl;
+			//std::cout << "Start Copy newLeaf000" << std::endl;
 			//std::copy(newLeaf000.begin(), newLeaf000.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf000, currentStart);  //this->copyIndexVector(newLeaf000, leaf.beginVertices + currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf000.size();
 		}
 
@@ -204,15 +257,19 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			min = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.0f);
 			max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, 0.5f * splitDiagonal.z);
+
+			//min = leaf.minLeafBox;
+			//max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
+
 			//this->getAABB(min, max, _vertices, newLeaf010);
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf010.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf010.size() << std::endl;
-			std::cout << "Start Copy newLeaf010" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf010.size() << std::endl;
+			//std::cout << "Start Copy newLeaf010" << std::endl;
 			//std::copy(newLeaf010.begin(), newLeaf010.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf010, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf010.size();
 		}
 
@@ -222,15 +279,17 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			min = leaf.minLeafBox;
 			max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
+			//min = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.0f);
+			//max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, 0.5f * splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf100);
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf100.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf100.size() << std::endl;
-			std::cout << "Start Copy newLeaf100" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf100.size() << std::endl;
+			//std::cout << "Start Copy newLeaf100" << std::endl;
 			//std::copy(newLeaf100.begin(), newLeaf100.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf100, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf100.size();
 		}
 
@@ -244,11 +303,11 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf110.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf110.size() << std::endl;
-			std::cout << "Start Copy newLeaf110" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf110.size() << std::endl;
+			//std::cout << "Start Copy newLeaf110" << std::endl;
 			//std::copy(newLeaf110.begin(), newLeaf110.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf110, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf110.size();
 		}
 
@@ -263,11 +322,11 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf001.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf001.size() << std::endl;
-			std::cout << "Start Copy newLeaf001" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf001.size() << std::endl;
+			//std::cout << "Start Copy newLeaf001" << std::endl;
 			//std::copy(newLeaf001.begin(), newLeaf001.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf001, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf001.size();
 		}
 
@@ -277,15 +336,18 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			min = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
 			max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, splitDiagonal.z);
+
+			//min = leaf.minLeafBox + glm::vec3(0.0f, 0.0f, 0.5f * splitDiagonal.z);
+			//max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf010);
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf011.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf011.size() << std::endl;
-			std::cout << "Start Copy newLeaf011" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf011.size() << std::endl;
+			//std::cout << "Start Copy newLeaf011" << std::endl;
 			//std::copy(newLeaf011.begin(), newLeaf011.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf011, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf011.size();
 		}
 
@@ -295,15 +357,17 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			min = leaf.minLeafBox + glm::vec3(0.0f, 0.0f, 0.5f * splitDiagonal.z);;
 			max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, splitDiagonal.z);
-			//this->getAABB(min, max, _vertices, newLeaf100);
+
+			//min = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
+			//max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, splitDiagonal.z);
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf101.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf101.size() << std::endl;
-			std::cout << "Start Copy newLeaf101" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf101.size() << std::endl;
+			//std::cout << "Start Copy newLeaf101" << std::endl;
 			//std::copy(newLeaf101.begin(), newLeaf101.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf101, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf101.size();
 		}
 
@@ -317,11 +381,11 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf111.size(), min, max));
 
-			std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf111.size() << std::endl;
-			std::cout << "Start Copy newLeaf111" << std::endl;
+			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf111.size() << std::endl;
+			//std::cout << "Start Copy newLeaf111" << std::endl;
 			//std::copy(newLeaf111.begin(), newLeaf111.end(), vertexIndexList.begin() + leaf.beginVertices + currentStart);
 			this->copyIndexVector(newLeaf111, currentStart);
-			std::cout << "End Copy" << std::endl;
+			//std::cout << "End Copy" << std::endl;
 			currentStart += newLeaf111.size();
 		}
 	}
@@ -343,7 +407,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 	for (int i = 0; i < leaf.children.size(); i++) {
 
-		std::cout << "Split if: "<< leaf.children[i].endVertices - leaf.children[i].beginVertices << " > " << this->maxVerticesPerQuad << std::endl;
+		//std::cout << "Split if: "<< leaf.children[i].endVertices - leaf.children[i].beginVertices << " > " << this->maxVerticesPerQuad << std::endl;
 
 		//if (leaf.children[i].endVertices - leaf.children[i].beginVertices > this->maxVerticesPerQuad) {
 			this->splitLeaf(leaf.children[i], _vertices);

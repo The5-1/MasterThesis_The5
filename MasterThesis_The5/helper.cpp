@@ -1018,6 +1018,14 @@ coordinateSystem::coordinateSystem()
 		glm::vec3(0.0f, 0.0f, 1.0f) };
 }
 
+coordinateSystem::~coordinateSystem()
+{
+	glDeleteBuffers(3, vbo);
+	indices.clear();
+	vertices.clear();
+	color.clear();
+}
+
 void coordinateSystem::upload()
 {
 	glGenBuffers(3, this->vbo);
@@ -1030,26 +1038,6 @@ void coordinateSystem::upload()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(unsigned int), this->indices.data(), GL_STATIC_DRAW);
-
-	////vertices = vector<glm::vec3>(4);
-	//vertices = { glm::vec3(0.0,  0.0,  0.0),
-	//	glm::vec3(0.0,  0.0,  1.0),
-	//	glm::vec3(0.0,  1.0,  0.0),
-	//	glm::vec3(0.0,  1.0,  1.0),
-	//	glm::vec3(1.0,  0.0,  0.0),
-	//	glm::vec3(1.0,  0.0,  1.0),
-	//	glm::vec3(1.0,  1.0,  0.0),
-	//	glm::vec3(1.0,  1.0,  1.0) };
-
-	////indices = vector<unsigned int>(6);
-	//indices = { 1,7,5, 1,3,7, 1,4,3, 1,2,4, 3,8,7, 3,4,8, 5,7,8, 5,8,6, 1,5,6, 1,6,2, 2,6,8, 2,8,4 };
-
-
-	//glGenBuffers(2, vbo);
-	//glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	//glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float) * 3, vertices.data(), GL_STATIC_DRAW);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 }
 
 
@@ -1065,11 +1053,4 @@ void coordinateSystem::draw()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
-
-	//glEnableVertexAttribArray(0);
-	//glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-	//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }

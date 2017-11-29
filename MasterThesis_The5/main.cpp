@@ -182,7 +182,7 @@ void delete_VTKfile(){
 
 
 std::vector<glm::vec3> colorOctree = { glm::vec3(1.0f, 0.0f, 0.0f),
-										glm::vec3(0.5f, 0.5f, 0.0f),
+										glm::vec3(1.0f, 0.6f, 0.0f),
 										glm::vec3(0.0f, 0.5f, 0.5f),
 										glm::vec3(1.0f, 1.0f, 1.0f),
 										glm::vec3(0.0f, 1.0f, 0.0f),
@@ -211,14 +211,16 @@ void init() {
 	obj-Models
 	*****************************************************************/
 	teaPot = new simpleModel("C:/Dev/Assets/Teapot/teapot.obj", true);
-	teaPot->uploadPoints();
-
 	std::cout << "TeaPot model: " << teaPot->vertices.size() << " vertices" << std::endl;
+
+	for (int i = 0; i < teaPot->vertices.size(); i++) {
+		teaPot->vertices[i] = 2.0f * teaPot->vertices[i];
+	}
 
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
-	octree = new PC_Octree(teaPot->vertices, 1000);
+	octree = new PC_Octree(teaPot->vertices, teaPot->normals, 10);
 	
 	int counter = 0;
 	for (int i = 0; i < 8; i++) {
@@ -268,11 +270,11 @@ void sponzaStandardScene(){
 	**********************************************/
 	glDisable(GL_CULL_FACE);
 
-	skyboxShader.enable();
-	skyboxShader.uniform("projMatrix", projMatrix);
-	skyboxShader.uniform("viewMatrix", cam.cameraRotation);
-	skybox.Draw(skyboxShader);
-	skyboxShader.disable();
+	//skyboxShader.enable();
+	//skyboxShader.uniform("projMatrix", projMatrix);
+	//skyboxShader.uniform("viewMatrix", cam.cameraRotation);
+	//skybox.Draw(skyboxShader);
+	//skyboxShader.disable();
 
 	/* ********************************************
 	Coordinate System
@@ -296,19 +298,21 @@ void sponzaStandardScene(){
 	basicShader.uniform("viewMatrix", viewMatrix);
 	basicShader.uniform("projMatrix", projMatrix);
 
+	//Draw Single Box
 	//basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
 	//octree->drawBox();
 
-	/*for (int i = 0; i < modelMatrixOctree.size(); i++) {
-		basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
-		basicShader.uniform("col", colorOctree[i]);
-		octree->drawBox();
-	}*/
+	//Draw first level of boxes
+	//for (int i = 0; i < modelMatrixOctree.size(); i++) {
+	//	basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
+	//	basicShader.uniform("col", colorOctree[i]);
+	//	octree->drawBox();
+	//}
 
-
+	//Draw finest level of boxes
 	for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
 		basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
-		basicShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+		basicShader.uniform("col", octree->colorLowestLeaf[i]);
 		octree->drawBox();
 	}
 
@@ -341,7 +345,8 @@ void sponzaStandardScene(){
 
 	simpleSplatShader.uniform("col", glm::vec3(1.0f, 0.0f, 0.0f));
 
-	teaPot->drawPoints();
+	//teaPot->drawPoints();
+	octree->drawPointCloud();
 
 	if (wireFrameTeapot) {
 		glPolygonMode(GL_FRONT, GL_FILL);
@@ -399,7 +404,7 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 
-	glClearColor(1.0f, 1.0f, 1.0f, 1);
+	glClearColor(0.3f, 0.3f, 0.3f, 1);
 	
 	sponzaStandardScene();
 	TwDraw(); //Draw Tweak-Bar
@@ -442,7 +447,7 @@ int main(int argc, char** argv) {
 
 	TwTerminate();
 
-
+	delete coordSysstem;
 	delete octree;
 	//delete_VTKfile();
 

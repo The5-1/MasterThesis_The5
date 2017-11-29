@@ -4,6 +4,7 @@
   
 layout(location = 0) in  vec3 vPosition; 
 layout(location = 1) in  vec3 vNormal; 
+layout(location = 2) in  vec3 vColor; 
 
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
@@ -20,7 +21,9 @@ uniform vec3 col;
 void main() {
 	gl_Position = vec4(vPosition, 1.0);
 
-	vertexOut.color = col;
+	//vertexOut.color = col;
+	vertexOut.color = vColor;
+	
 	vertexOut.normal = normalize(vNormal);
 	vertexOut.radius = 0.06;
 }
