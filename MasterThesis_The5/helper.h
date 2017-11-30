@@ -82,12 +82,15 @@ protected:
 class viewFrustrum
 {
 public:
-	viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
+	viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix, int frustrumToBoxes, glm::vec3& viewDirection);
 	~viewFrustrum();
 	void upload();
 	void draw();
 	void change(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
+	void frustrumToBoxes(glm::vec3& viewDirection);
+
 protected:
+	int numBoxes;
 	vector<unsigned int> indices;
 	vector<glm::vec3> vertices;
 	vector<glm::vec3> color;

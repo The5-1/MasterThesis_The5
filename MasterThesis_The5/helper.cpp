@@ -1055,8 +1055,9 @@ void coordinateSystem::draw()
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
 }
 
-viewFrustrum::viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix)
+viewFrustrum::viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix, int frustrumToBoxes, glm::vec3& viewDirection)
 {
+	this->numBoxes = frustrumToBoxes;
 	this->change(modelMatrix, viewMatrix, projMatrix);
 }
 
@@ -1092,11 +1093,49 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 		2, 6,
 		3, 7 };
 
-	this->color = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
-		glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+	this->color = { glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 
-		glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), //Far-Plane
-		glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f) }; //Far-Plane
+		glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), };
+
+	//this->color = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+	//	glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+
+	//	glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), //Far-Plane
+	//	glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f) }; //Far-Plane
+}
+
+void viewFrustrum::frustrumToBoxes(glm::vec3& viewDirection)
+{
+	glm::vec3 dir0 = this->vertices[4] - this->vertices[0];
+	float length0 = glm::length(dir0);
+	dir0 = glm::normalize(dir0);
+
+	glm::vec3 dir1 = this->vertices[5] - this->vertices[1];
+	float length1 = glm::length(dir1);
+	dir1 = glm::normalize(dir1);
+
+	glm::vec3 dir2 = this->vertices[6] - this->vertices[2];
+	float length2 = glm::length(dir2);
+	dir2 = glm::normalize(dir2);
+
+	glm::vec3 dir3 = this->vertices[7] - this->vertices[3];
+	float length3 = glm::length(dir3);
+	dir3 = glm::normalize(dir3);
+
+	std::vector<glm::vec3> corners;
+
+	for (int i = 0; i < this->numBoxes; i++) {
+		
+		corners.push_back(this->vertices[0] + (float(i + 1) / float(numBoxes)) * dir0);
+		corners.push_back(this->vertices[1] + (float(i + 1) / float(numBoxes)) * dir1);
+		corners.push_back(this->vertices[2] + (float(i + 1) / float(numBoxes)) * dir2);
+		corners.push_back(this->vertices[3] + (float(i + 1) / float(numBoxes)) * dir3);
+
+	}
+
+
 }
 
 viewFrustrum::~viewFrustrum()

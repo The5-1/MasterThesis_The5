@@ -250,7 +250,7 @@ void init() {
 	/*****************************************************************
 	View Frusturm
 	*****************************************************************/
-	viewfrustrum = new viewFrustrum(glm::mat4(1.0f), viewMatrix, projMatrix);
+	viewfrustrum = new viewFrustrum(glm::mat4(1.0f), viewMatrix, projMatrix, 5, glm::vec3(cam.viewDir));
 	viewfrustrum->upload();
 
 	/*****************************************************************
