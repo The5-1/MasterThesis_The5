@@ -1054,3 +1054,82 @@ void coordinateSystem::draw()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
 }
+
+viewFrustrum::viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix)
+{
+	this->change(modelMatrix, viewMatrix, projMatrix);
+}
+
+void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::mat4 & projMatrix)
+{
+	std::vector<glm::vec4> tempVertices = { glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f),	//Near
+		glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),	//Near
+		glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),		//Near
+		glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),	//Near
+		glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),	//Far
+		glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),		//Far
+		glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),		//Far
+		glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f) };	//Far
+
+	this->vertices.resize(8);
+	glm::mat4 temp = glm::inverse(projMatrix * viewMatrix * modelMatrix);
+
+	for (int i = 0; i < 8; i++) {
+		tempVertices[i] = temp * tempVertices[i];
+		this->vertices[i] = glm::vec3(tempVertices[i]) / tempVertices[i].w;
+	}
+
+	this->indices = { 0, 1,
+		1, 2,
+		2, 3,
+		3, 0,
+		4, 5,
+		5, 6,
+		6, 7,
+		7, 4,
+		0, 4,
+		1, 5,
+		2, 6,
+		3, 7 };
+
+	this->color = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+		glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+
+		glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), //Far-Plane
+		glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f) }; //Far-Plane
+}
+
+viewFrustrum::~viewFrustrum()
+{
+	glDeleteBuffers(3, this->vbo);
+}
+
+void viewFrustrum::upload()
+{
+	glGenBuffers(3, this->vbo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(float) * 3, this->vertices.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, this->color.size() * sizeof(float) * 3, this->color.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(unsigned int), this->indices.data(), GL_STATIC_DRAW);
+}
+
+void viewFrustrum::draw()
+{
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
+	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
+}
+
+

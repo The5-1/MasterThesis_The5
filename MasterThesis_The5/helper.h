@@ -78,6 +78,22 @@ protected:
 	GLuint vbo[3];
 };
 
+//View Frustrum
+class viewFrustrum
+{
+public:
+	viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
+	~viewFrustrum();
+	void upload();
+	void draw();
+	void change(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
+protected:
+	vector<unsigned int> indices;
+	vector<glm::vec3> vertices;
+	vector<glm::vec3> color;
+	GLuint vbo[3];
+};
+
 // very simple geometry
 class simpleModel
 {

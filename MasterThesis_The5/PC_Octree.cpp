@@ -165,12 +165,24 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 	{
 		if (leaf.endVertices - leaf.beginVertices < this->maxVerticesPerQuad) {
-			std::cout << "Begin: " << leaf.beginVertices << ", end: " << leaf.endVertices << std::endl;
-			std::cout << "Color: (" << vertexColorList[leaf.beginVertices].x << "," << vertexColorList[leaf.beginVertices].y << "," << vertexColorList[leaf.beginVertices].z << ")" << std::endl;
+
+			if (leaf.endVertices - leaf.beginVertices == 0) {
+				std::cout << "Error: Empty Box!" << std::endl;
+			}
+
+			//std::cout << "Begin: " << leaf.beginVertices << ", end: " << leaf.endVertices << std::endl;
+			//std::cout << "Color: (" << vertexColorList[leaf.beginVertices].x << "," << vertexColorList[leaf.beginVertices].y << "," << vertexColorList[leaf.beginVertices].z << ")" << std::endl;
 			glm::mat4 modelMatrix;
 			this->getAabbLeafUniforms(modelMatrix, leaf);
 			modelMatrixLowestLeaf.push_back(modelMatrix);
-			colorLowestLeaf.push_back(vertexColorList[this->vertexIndexList[leaf.beginVertices]]);
+
+			if (leaf.endVertices - leaf.beginVertices == 1) {
+				colorLowestLeaf.push_back(glm::vec3(1.0f, 0.078f, 0.576f));
+			}
+			else{
+				colorLowestLeaf.push_back(vertexColorList[this->vertexIndexList[leaf.beginVertices]]);
+			}
+
 			return;
 		}
 

@@ -39,7 +39,9 @@ glm::vec2 resolution = glm::vec2(1024, 768);
 
 //Externals
 //cameraSystem cam(1.0f, 1.0f, glm::vec3(20.95f, 20.95f, -0.6f));
-cameraSystem cam(1.0f, 1.0f, glm::vec3(2.44f, 1.41f, 0.008f));
+//cameraSystem cam(1.0f, 1.0f, glm::vec3(2.44f, 1.41f, 0.008f));
+cameraSystem cam(1.0f, 1.0f, glm::vec3(6.36f, 2.94f, 0.05f));
+
 glm::mat4 projMatrix;
 glm::mat4 viewMatrix;
 
@@ -68,12 +70,14 @@ Shader skyboxShader;
 //Models
 simpleModel *teaPot = 0;
 coordinateSystem *coordSysstem = 0;
+viewFrustrum * viewfrustrum = 0;
 
 // tweak bar
 TwBar *tweakBar;
 bool wireFrameTeapot = false;
 bool backfaceCull = true;
-
+bool drawOctreeBox = false;
+bool setViewFrustrum = false;
 glm::vec3 lightDir;
 
 /* *********************************************************************************************************
@@ -83,11 +87,14 @@ void setupTweakBar() {
 	TwInit(TW_OPENGL_CORE, NULL);
 	tweakBar = TwNewBar("Settings");
 
-	//TwAddVarRW(tweakBar, "lightDirection", TW_TYPE_DIR3F, &lightDir, "label='Light Direction'");
-
 	TwAddSeparator(tweakBar, "Wireframe", nullptr);
 	TwAddVarRW(tweakBar, "Wireframe Teapot", TW_TYPE_BOOLCPP, &wireFrameTeapot, " label='Wireframe Teapot' ");
 	TwAddVarRW(tweakBar, "Backface Cull", TW_TYPE_BOOLCPP, &backfaceCull, " label='Backface Cull' ");
+
+	TwAddVarRW(tweakBar, "Octree Box", TW_TYPE_BOOLCPP, &drawOctreeBox, " label='Octree Box' ");
+
+	TwAddSeparator(tweakBar, "Set Viewfrustrum", nullptr);
+	TwAddVarRW(tweakBar, "ViewFrustrum", TW_TYPE_BOOLCPP, &setViewFrustrum, " label='ViewFrustrum' ");
 
 	//// Array of drop down items
 	//TwEnumVal Operations[] = { { SPLIT, "SPLIT" },{ FLIP, "FLIP" },{ COLLAPSE, "COLLAPSE" }};
@@ -240,6 +247,11 @@ void init() {
 	coordSysstem = new coordinateSystem();
 	coordSysstem->upload();
 
+	/*****************************************************************
+	View Frusturm
+	*****************************************************************/
+	viewfrustrum = new viewFrustrum(glm::mat4(1.0f), viewMatrix, projMatrix);
+	viewfrustrum->upload();
 
 	/*****************************************************************
 	Skybox (Only for aesthetic reasons, can be deleted)
@@ -290,34 +302,35 @@ void sponzaStandardScene(){
 	/* ********************************************
 	Octree
 	**********************************************/
-	basicShader.enable();
+	if (drawOctreeBox) {
+		basicShader.enable();
 
-	octree->getAabbUniforms(modelMatrix);
+		
+		basicShader.uniform("viewMatrix", viewMatrix);
+		basicShader.uniform("projMatrix", projMatrix);
 
-	basicShader.uniform("modelMatrix", modelMatrix);
-	basicShader.uniform("viewMatrix", viewMatrix);
-	basicShader.uniform("projMatrix", projMatrix);
+		//Draw Single Box
+		//octree->getAabbUniforms(modelMatrix);
+		//basicShader.uniform("modelMatrix", modelMatrix);
+		//basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
+		//octree->drawBox();
 
-	//Draw Single Box
-	//basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
-	//octree->drawBox();
+		//Draw first level of boxes
+		//for (int i = 0; i < modelMatrixOctree.size(); i++) {
+		//	basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
+		//	basicShader.uniform("col", colorOctree[i]);
+		//	octree->drawBox();
+		//}
 
-	//Draw first level of boxes
-	//for (int i = 0; i < modelMatrixOctree.size(); i++) {
-	//	basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
-	//	basicShader.uniform("col", colorOctree[i]);
-	//	octree->drawBox();
-	//}
+		//Draw finest level of boxes
+		for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+			basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+			basicShader.uniform("col", octree->colorLowestLeaf[i]);
+			octree->drawBox();
+		}
 
-	//Draw finest level of boxes
-	for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
-		basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
-		basicShader.uniform("col", octree->colorLowestLeaf[i]);
-		octree->drawBox();
+		basicShader.disable();
 	}
-
-	basicShader.disable();
-
 
 	/* ********************************************
 	Simple Splat
@@ -345,15 +358,31 @@ void sponzaStandardScene(){
 
 	simpleSplatShader.uniform("col", glm::vec3(1.0f, 0.0f, 0.0f));
 
-	//teaPot->drawPoints();
 	octree->drawPointCloud();
 
 	if (wireFrameTeapot) {
 		glPolygonMode(GL_FRONT, GL_FILL);
 		glPolygonMode(GL_BACK, GL_FILL);
 	}
-
 	simpleSplatShader.disable();
+
+	/* ********************************************
+	View Frustrum
+	**********************************************/
+	if (setViewFrustrum) {
+		setViewFrustrum = false;
+		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
+		viewfrustrum->upload();
+	}
+
+	basicColorShader.enable();
+	modelMatrix = glm::scale(glm::vec3(1.0f));
+	basicColorShader.uniform("modelMatrix", modelMatrix);
+	basicColorShader.uniform("viewMatrix", viewMatrix);
+	basicColorShader.uniform("projMatrix", projMatrix);
+	viewfrustrum->draw();
+	basicColorShader.disable();
+	
 
 	///* ********************************************
 	//VTK-Mesh
@@ -449,6 +478,7 @@ int main(int argc, char** argv) {
 
 	delete coordSysstem;
 	delete octree;
+	delete viewfrustrum;
 	//delete_VTKfile();
 
 
