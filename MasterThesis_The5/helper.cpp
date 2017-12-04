@@ -267,6 +267,58 @@ static string textFileRead(const char *fileName)
     return fileString;
 }
 
+glm::vec3 HSVtoRGB(float  fH, float  fS, float  fV)
+{
+	float fC = fV * fS; // Chroma
+	float fHPrime = fmod(fH / 60.0, 6);
+	float fX = fC * (1 - fabs(fmod(fHPrime, 2) - 1));
+	float fM = fV - fC;
+
+	glm::vec3 color;
+
+	if (0 <= fHPrime && fHPrime < 1) {
+		color.x = fC;
+		color.y = fX;
+		color.z = 0;
+	}
+	else if (1 <= fHPrime && fHPrime < 2) {
+		color.x = fX;
+		color.y = fC;
+		color.z = 0;
+	}
+	else if (2 <= fHPrime && fHPrime < 3) {
+		color.x = 0;
+		color.y = fC;
+		color.z = fX;
+	}
+	else if (3 <= fHPrime && fHPrime < 4) {
+		color.x = 0;
+		color.y = fX;
+		color.z = fC;
+	}
+	else if (4 <= fHPrime && fHPrime < 5) {
+		color.x = fX;
+		color.y = 0;
+		color.z = fC;
+	}
+	else if (5 <= fHPrime && fHPrime < 6) {
+		color.x = fC;
+		color.y = 0;
+		color.z = fX;
+	}
+	else {
+		color.x = 0;
+		color.y = 0;
+		color.z = 0;
+	}
+
+	color.x += fM;
+	color.y += fM;
+	color.z += fM;
+
+	return color;
+}
+
 // screen space quad
 void simpleQuad::upload() {
 	vertices = vector<glm::vec3>(4);
@@ -1053,6 +1105,9 @@ void coordinateSystem::draw()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 }
 
 viewFrustrum::viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix, int frustrumToBoxes, glm::vec3& viewDirection)
@@ -1093,6 +1148,7 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 		2, 6,
 		3, 7 };
 
+
 	this->color = { glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 
@@ -1108,34 +1164,107 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 
 void viewFrustrum::frustrumToBoxes(glm::vec3& viewDirection)
 {
+	glm::vec3 normViewDir = glm::normalize(viewDirection);
+
 	glm::vec3 dir0 = this->vertices[4] - this->vertices[0];
+	//float lengthCamDir0 = glm::dot(dir0, normViewDir);
 	float length0 = glm::length(dir0);
 	dir0 = glm::normalize(dir0);
+	float lengthCamDir0 = glm::dot((1.0f / float(numBoxes)) * length0 * dir0, normViewDir);
 
 	glm::vec3 dir1 = this->vertices[5] - this->vertices[1];
+	//float lengthCamDir1 = glm::dot(dir1, normViewDir);
 	float length1 = glm::length(dir1);
 	dir1 = glm::normalize(dir1);
+	float lengthCamDir1 = glm::dot((1.0f / float(numBoxes)) * length1 * dir1, normViewDir);
 
 	glm::vec3 dir2 = this->vertices[6] - this->vertices[2];
+	//float lengthCamDir2 = glm::dot(dir2, normViewDir);
 	float length2 = glm::length(dir2);
 	dir2 = glm::normalize(dir2);
+	float lengthCamDir2 = glm::dot((1.0f / float(numBoxes)) * length2 * dir2, normViewDir);
 
 	glm::vec3 dir3 = this->vertices[7] - this->vertices[3];
+	//float lengthCamDir3 = glm::dot(dir3, normViewDir);
 	float length3 = glm::length(dir3);
 	dir3 = glm::normalize(dir3);
+	float lengthCamDir3 = glm::dot((1.0f / float(numBoxes)) * length3 * dir3, normViewDir);
+	
 
-	std::vector<glm::vec3> corners;
 
+	
+
+	this->indices.clear();
+	//this->indices.resize(this->numBoxes * 8 * 2);
+	
+	this->color.clear();
+
+	std::vector<glm::vec3> corners(this->numBoxes * 8);
+	
 	for (int i = 0; i < this->numBoxes; i++) {
-		
-		corners.push_back(this->vertices[0] + (float(i + 1) / float(numBoxes)) * dir0);
-		corners.push_back(this->vertices[1] + (float(i + 1) / float(numBoxes)) * dir1);
-		corners.push_back(this->vertices[2] + (float(i + 1) / float(numBoxes)) * dir2);
-		corners.push_back(this->vertices[3] + (float(i + 1) / float(numBoxes)) * dir3);
+		float scale = float(i + 1) / float(numBoxes);
+		corners[8 * i + 4] = this->vertices[0] + (scale) * length0 * dir0;
+		corners[8 * i + 5] = this->vertices[1] + (scale) * length1 * dir1;
+		corners[8 * i + 6] = this->vertices[2] + (scale) * length2 * dir2;
+		corners[8 * i + 7] = this->vertices[3] + (scale) * length3 * dir3;
+	 			 
+		corners[8 * i + 0] = corners[8 * i + 4] + lengthCamDir0 * normViewDir;
+		corners[8 * i + 1] = corners[8 * i + 5] + lengthCamDir1 * normViewDir;
+		corners[8 * i + 2] = corners[8 * i + 6] + lengthCamDir2 * normViewDir;
+		corners[8 * i + 3] = corners[8 * i + 7] + lengthCamDir3 * normViewDir;
 
+		//Color
+		this->color.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+		this->color.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+		this->color.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+		this->color.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
+		this->color.push_back(HSVtoRGB(360.0f / float(i + 1), 1.0f, 1.0f));
+		this->color.push_back(HSVtoRGB(360.0f / float(i + 1), 1.0f, 1.0f));
+		this->color.push_back(HSVtoRGB(360.0f / float(i + 1), 1.0f, 1.0f));
+		this->color.push_back(HSVtoRGB(360.0f / float(i + 1), 1.0f, 1.0f));
+
+
+		//Bacck
+		this->indices.push_back(8 * i + 4);
+		this->indices.push_back(8 * i + 5);
+
+		this->indices.push_back(8 * i + 5);
+		this->indices.push_back(8 * i + 6);
+
+		this->indices.push_back(8 * i + 6);
+		this->indices.push_back(8 * i + 7);
+
+		this->indices.push_back(8 * i + 7);
+		this->indices.push_back(8 * i + 4);
+
+		//Front
+		this->indices.push_back(8 * i + 0);
+		this->indices.push_back(8 * i + 1);
+
+		this->indices.push_back(8 * i + 1);
+		this->indices.push_back(8 * i + 2);
+
+		this->indices.push_back(8 * i + 2);
+		this->indices.push_back(8 * i + 3);
+
+		this->indices.push_back(8 * i + 3);
+		this->indices.push_back(8 * i + 0);
+
+		//Sides
+		this->indices.push_back(8 * i + 4);
+		this->indices.push_back(8 * i + 0);
+
+		this->indices.push_back(8 * i + 5);
+		this->indices.push_back(8 * i + 1);
+
+		this->indices.push_back(8 * i + 6);
+		this->indices.push_back(8 * i + 2);
+
+		this->indices.push_back(8 * i + 7);
+		this->indices.push_back(8 * i + 3);
 	}
 
-
+	this->vertices = corners;
 }
 
 viewFrustrum::~viewFrustrum()
@@ -1168,7 +1297,9 @@ void viewFrustrum::draw()
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vbo[2]);
+
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
+	//glDrawElements(GL_QUADS, this->indices.size(), GL_UNSIGNED_INT, 0);
 }
 
 

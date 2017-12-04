@@ -39,6 +39,23 @@ bool _gl_check_error(const char* arg, const char *file, int line, const char *fu
 
 static string textFileRead(const char *fileName);
 
+/*! \brief Convert HSV to RGB color space
+
+Converts a given set of HSV values `h', `s', `v' into RGB
+coordinates. The output RGB values are in the range [0, 1], and
+the input HSV values are in the ranges h = [0, 360], and s, v =
+[0, 1], respectively.
+
+\param fR Red component, used as output, range: [0, 1]
+\param fG Green component, used as output, range: [0, 1]
+\param fB Blue component, used as output, range: [0, 1]
+\param fH Hue component, used as input, range: [0, 360]
+\param fS Hue component, used as input, range: [0, 1]
+\param fV Hue component, used as input, range: [0, 1]
+
+*/
+glm::vec3 HSVtoRGB(float fH, float fS, float fV);
+
 // Screen Space Quad
 class simpleQuad
 {
