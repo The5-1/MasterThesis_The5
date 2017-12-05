@@ -193,7 +193,20 @@ void initGL() {
 	const glm::vec3 up =     glm::vec3(cam.upDir);
 
 	viewMatrix = glm::lookAt(eye,center,up);
-	projMatrix =  glm::perspective(70.0f, (GLfloat)WIDTH / (GLfloat)HEIGHT, 1.0f, 500.0f);
+	float fov = 70.0f;
+	GLfloat aspect = (GLfloat)WIDTH / (GLfloat)HEIGHT;
+	float nearP = 1.0f, farP = 500.0f;
+	projMatrix =  glm::perspective(fov, aspect, nearP, farP);
+
+	cam.Hnear = 2.0f * glm::tan(fov / 2.0f) * nearP;
+	cam.Wnear = cam.Hnear * aspect;
+
+	cam.Hfar = 2.0f * tan(fov / 2.0f) * farP;
+	cam.Wfar = cam.Hfar * aspect;
+
+	cam.nearDist = nearP;
+	cam.farDist = farP;
+
 	reshape(WIDTH, HEIGHT);
 }
 
@@ -1039,6 +1052,25 @@ void cameraSystem::updateRotationMatrix(glm::mat4 view) {
 	cameraRotation[3][2] = 0.0f;
 }
 
+void cameraSystem::updateViewFrustrum() {
+	glm::vec3 p = glm::vec3(this->position);
+	glm::vec3 d = glm::vec3(glm::normalize(this->viewDir));
+	glm::vec3 up = glm::vec3(this->upDir);
+	glm::vec3 right = glm::vec3(this->rightDir);
+
+	fc = p + d * farDist;
+	ftl = fc + (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
+	ftr = fc + (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
+	fbl = fc - (up * Hfar / 2.0f) - (right * Wfar / 2.0f);
+	fbr = fc - (up * Hfar / 2.0f) + (right * Wfar / 2.0f);
+
+	nc = p + d * nearDist;
+
+	ntl = nc + (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
+	ntr = nc + (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
+	nbl = nc - (up * Hnear / 2.0f) - (right * Wnear / 2.0f);
+	nbr = nc - (up * Hnear / 2.0f) + (right * Wnear / 2.0f);
+}
 
 
 void cameraSystem::Update(){
@@ -1154,12 +1186,75 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 
 		glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), };
+}
 
-	//this->color = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
-	//	glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), //Near-Plane
+void viewFrustrum::getPlaneNormal()
+{
+	//Do not use this after transforming into a boxes!!!
+	//We have 8 vertices, 8 colors, 24 indices
 
-	//	glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), //Far-Plane
-	//	glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f) }; //Far-Plane
+	//Get the middle Point of each plane (just for visualization)
+	this->vertices.push_back( ( this->vertices[0] + this->vertices[1] + this->vertices[2] + this->vertices[3] ) / 4.0f); //Vertex-Index: 8, near
+	this->vertices.push_back((this->vertices[4] + this->vertices[5] + this->vertices[6] + this->vertices[7]) / 4.0f); //Vertex-Index: 9, far
+	this->vertices.push_back((this->vertices[0] + this->vertices[3] + this->vertices[4] + this->vertices[7]) / 4.0f); //Vertex-Index: 10, left
+	this->vertices.push_back((this->vertices[1] + this->vertices[2] + this->vertices[5] + this->vertices[6]) / 4.0f); //Vertex-Index: 11, right
+	this->vertices.push_back((this->vertices[3] + this->vertices[2] + this->vertices[7] + this->vertices[6]) / 4.0f); //Vertex-Index: 12, up
+	this->vertices.push_back((this->vertices[0] + this->vertices[1] + this->vertices[4] + this->vertices[5]) / 4.0f); //Vertex-Index: 13, down
+
+	this->nearNormal = -glm::normalize(glm::cross(this->vertices[1] - this->vertices[0], this->vertices[3] - this->vertices[0]));
+	this->farNormal = -glm::normalize(glm::cross(this->vertices[7] - this->vertices[4], this->vertices[5] - this->vertices[4]));
+	this->leftNormal = glm::normalize(glm::cross(this->vertices[0] - this->vertices[3], this->vertices[7] - this->vertices[3]));
+	this->rightNormal = -glm::normalize(glm::cross(this->vertices[1] - this->vertices[2], this->vertices[5] - this->vertices[2]));
+	this->upNormal = glm::normalize(glm::cross(this->vertices[7] - this->vertices[3], this->vertices[2] - this->vertices[3]));
+	this->downNormal = -glm::normalize(glm::cross(this->vertices[0] - this->vertices[1], this->vertices[5] - this->vertices[1]));
+
+	this->vertices.push_back(this->vertices[8] + 2.0f * this->nearNormal); //Vertex-Index: 14
+	this->vertices.push_back(this->vertices[9] + 2.0f * this->farNormal); //Vertex-Index: 15
+	this->vertices.push_back(this->vertices[10] + 2.0f * this->leftNormal); //Vertex-Index: 16
+	this->vertices.push_back(this->vertices[11] + 2.0f * this->rightNormal); //Vertex-Index: 17
+	this->vertices.push_back(this->vertices[12] + 2.0f * this->upNormal); //Vertex-Index: 18
+	this->vertices.push_back(this->vertices[13] + 2.0f * this->downNormal); //Vertex-Index: 19
+
+	//Give every new vertex the color pink
+	for (int i = 0; i < 6; i++) {
+		this->color.push_back(glm::vec3(1.0f,1.0f, 1.0f));
+	}
+
+	for (int i = 0; i < 6; i++) {
+		this->color.push_back(glm::vec3(1.0f, 0.08f, 0.6f));
+	}
+
+	////Cross into the planes
+	int newIndices[60] = {8, 14, //Normal
+						9, 15, //Normal
+						10, 16, //Normal
+						11, 17, //Normal
+						12, 18, //Normal
+						13, 19, //Normal
+						0, 8, 1, 8, 2, 8, 3, 8, //Cross inside plane (near)
+
+						4, 9, 5, 9, 6, 9, 7, 9, //Cross inside plane
+
+						0, 10, 3, 10, 4, 10, 7, 10, //Cross inside plane
+
+						1, 11, 2, 11, 5, 11, 6, 11, //Cross inside plane
+
+						3, 12, 2, 12, 7, 12, 6, 12, //Cross inside plane
+
+						0, 13, 1, 13, 4, 13, 5, 13 //Cross inside plane
+						};
+	this->indices.insert(this->indices.end(), newIndices, newIndices + 60);
+
+	////Without cross
+	//int newIndices[12] = { 8, 14, //Normal
+	//	9, 15, //Normal
+	//	10, 16, //Normal
+	//	11, 17, //Normal
+	//	12, 18, //Normal
+	//	13, 19, //Normal
+	//};
+	//this->indices.insert(this->indices.end(), newIndices, newIndices + 12);
+
 }
 
 void viewFrustrum::frustrumToBoxes(glm::vec3& viewDirection)

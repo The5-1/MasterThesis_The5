@@ -104,13 +104,23 @@ public:
 	void upload();
 	void draw();
 	void change(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
+
+	void getPlaneNormal();
+
 	void frustrumToBoxes(glm::vec3& viewDirection);
 
 protected:
-	int numBoxes;
+	
+	//Normals of the 6 planes of the Frustrum (all should point inwards
+	glm::vec3 nearNormal, farNormal, leftNormal, rightNormal, upNormal, downNormal;
+
 	vector<unsigned int> indices;
 	vector<glm::vec3> vertices;
 	vector<glm::vec3> color;
+
+	//Split Frustrum into Boxes (mainly for visual, has no other use)
+	int numBoxes;
+
 	GLuint vbo[3];
 };
 
@@ -210,9 +220,17 @@ public:
 
 	void Update();
 
+	//Get camera view Frustrum
+	float Hnear, Wnear, Hfar, Wfar;
+	float nearDist, farDist;
+
+	glm::vec3 fc, ftl, ftr, fbl, fbr, nc, ntl, ntr, nbl, nbr;
+
 private:
 	void updateCameraMatrix();
 	void updateRotationMatrix(glm::mat4 view);
+
+	void updateViewFrustrum();
 
 };
 

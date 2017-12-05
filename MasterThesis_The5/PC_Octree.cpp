@@ -128,6 +128,10 @@ void PC_Octree::drawPointCloud()
 
 }
 
+void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum vF)
+{
+}
+
 /* *********************************************************************************************************
 //Functions (private)
 ********************************************************************************************************* */
@@ -172,16 +176,14 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			//std::cout << "Begin: " << leaf.beginVertices << ", end: " << leaf.endVertices << std::endl;
 			//std::cout << "Color: (" << vertexColorList[leaf.beginVertices].x << "," << vertexColorList[leaf.beginVertices].y << "," << vertexColorList[leaf.beginVertices].z << ")" << std::endl;
+
 			glm::mat4 modelMatrix;
 			this->getAabbLeafUniforms(modelMatrix, leaf);
 			modelMatrixLowestLeaf.push_back(modelMatrix);
 
-			if (leaf.endVertices - leaf.beginVertices == 1) {
-				colorLowestLeaf.push_back(glm::vec3(1.0f, 0.078f, 0.576f));
-			}
-			else{
-				colorLowestLeaf.push_back(vertexColorList[this->vertexIndexList[leaf.beginVertices]]);
-			}
+			leaf.boxColorId = colorLowestLeaf.size();
+			colorLowestLeaf.push_back(vertexColorList[this->vertexIndexList[leaf.beginVertices]]);
+
 
 			return;
 		}

@@ -3,7 +3,7 @@
 #include <glm\glm.hpp>
 #include <GL/glew.h>
 #include <GL/glut.h>
-
+#include "helper.h"
 //Std
 #include <iostream>
 #include <vector>
@@ -22,6 +22,7 @@ public:
 
 	//Experimental: Helper variables to draw a box around the leaf
 	glm::vec3 minLeafBox, maxLeafBox;
+	int boxColorId;
 
 	Octree() {
 	}
@@ -93,6 +94,7 @@ public:
 	void uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals);
 	void drawPointCloud();
 
+	void cullWithViewFrustrum(Octree& leaf, viewFrustrum vF);
 
 private:
 	void splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices);

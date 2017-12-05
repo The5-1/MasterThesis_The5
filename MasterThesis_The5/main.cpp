@@ -372,7 +372,8 @@ void sponzaStandardScene(){
 	if (setViewFrustrum) {
 		setViewFrustrum = false;
 		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
-		viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
+		//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
+		viewfrustrum->getPlaneNormal();
 		viewfrustrum->upload();
 	}
 
