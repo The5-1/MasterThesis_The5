@@ -75,9 +75,10 @@ viewFrustrum * viewfrustrum = 0;
 // tweak bar
 TwBar *tweakBar;
 bool wireFrameTeapot = false;
-bool backfaceCull = true;
+bool backfaceCull = false;
 bool drawOctreeBox = false;
 bool setViewFrustrum = false;
+bool showFrustrumCull = false;
 glm::vec3 lightDir;
 
 /* *********************************************************************************************************
@@ -95,6 +96,7 @@ void setupTweakBar() {
 
 	TwAddSeparator(tweakBar, "Set Viewfrustrum", nullptr);
 	TwAddVarRW(tweakBar, "ViewFrustrum", TW_TYPE_BOOLCPP, &setViewFrustrum, " label='ViewFrustrum' ");
+	TwAddVarRW(tweakBar, "Frustrum Cull", TW_TYPE_BOOLCPP, &showFrustrumCull, " label='Frustrum Cull' ");
 
 	//// Array of drop down items
 	//TwEnumVal Operations[] = { { SPLIT, "SPLIT" },{ FLIP, "FLIP" },{ COLLAPSE, "COLLAPSE" }};
@@ -373,7 +375,7 @@ void sponzaStandardScene(){
 		setViewFrustrum = false;
 		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
 		//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
-		viewfrustrum->getPlaneNormal();
+		viewfrustrum->getPlaneNormal(false);
 		viewfrustrum->upload();
 	}
 
@@ -384,6 +386,21 @@ void sponzaStandardScene(){
 	basicColorShader.uniform("projMatrix", projMatrix);
 	viewfrustrum->draw();
 	basicColorShader.disable();
+
+	basicShader.enable();
+	basicShader.uniform("viewMatrix", viewMatrix);
+	basicShader.uniform("projMatrix", projMatrix);
+	if (showFrustrumCull) {
+		octree->initViewFrustrumCull(octree->root, *viewfrustrum);
+		for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+			basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+			basicShader.uniform("col", octree->colorLowestLeaf[i]);
+			octree->drawBox();
+		}
+	}
+	basicShader.disable();
+
+	
 	
 
 	///* ********************************************
@@ -446,6 +463,9 @@ void display() {
 }
 
 int main(int argc, char** argv) {
+	//std::vector<glm::vec3> test;
+	//std::cout << test.max_size() << std::endl;
+
 	glutInit(&argc, argv);
 	glutInitWindowSize(WIDTH, HEIGHT);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE | GLUT_STENCIL);

@@ -1188,7 +1188,7 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), };
 }
 
-void viewFrustrum::getPlaneNormal()
+void viewFrustrum::getPlaneNormal(bool drawCrossPlanes)
 {
 	//Do not use this after transforming into a boxes!!!
 	//We have 8 vertices, 8 colors, 24 indices
@@ -1202,11 +1202,23 @@ void viewFrustrum::getPlaneNormal()
 	this->vertices.push_back((this->vertices[0] + this->vertices[1] + this->vertices[4] + this->vertices[5]) / 4.0f); //Vertex-Index: 13, down
 
 	this->nearNormal = -glm::normalize(glm::cross(this->vertices[1] - this->vertices[0], this->vertices[3] - this->vertices[0]));
+	this->nearPoint = this->vertices[1];
+
 	this->farNormal = -glm::normalize(glm::cross(this->vertices[7] - this->vertices[4], this->vertices[5] - this->vertices[4]));
+	this->farPoint = this->vertices[7];
+
 	this->leftNormal = glm::normalize(glm::cross(this->vertices[0] - this->vertices[3], this->vertices[7] - this->vertices[3]));
+	this->leftPoint = this->vertices[0];
+
 	this->rightNormal = -glm::normalize(glm::cross(this->vertices[1] - this->vertices[2], this->vertices[5] - this->vertices[2]));
+	this->rightPoint = this->vertices[1];
+
 	this->upNormal = glm::normalize(glm::cross(this->vertices[7] - this->vertices[3], this->vertices[2] - this->vertices[3]));
+	this->upPoint = this->vertices[7];
+
 	this->downNormal = -glm::normalize(glm::cross(this->vertices[0] - this->vertices[1], this->vertices[5] - this->vertices[1]));
+	this->downPoint = this->vertices[0];
+
 
 	this->vertices.push_back(this->vertices[8] + 2.0f * this->nearNormal); //Vertex-Index: 14
 	this->vertices.push_back(this->vertices[9] + 2.0f * this->farNormal); //Vertex-Index: 15
@@ -1225,36 +1237,38 @@ void viewFrustrum::getPlaneNormal()
 	}
 
 	////Cross into the planes
-	int newIndices[60] = {8, 14, //Normal
-						9, 15, //Normal
-						10, 16, //Normal
-						11, 17, //Normal
-						12, 18, //Normal
-						13, 19, //Normal
-						0, 8, 1, 8, 2, 8, 3, 8, //Cross inside plane (near)
+	if (drawCrossPlanes) {
+		int newIndices[60] = { 8, 14, //Normal
+							9, 15, //Normal
+							10, 16, //Normal
+							11, 17, //Normal
+							12, 18, //Normal
+							13, 19, //Normal
+							0, 8, 1, 8, 2, 8, 3, 8, //Cross inside plane (near)
 
-						4, 9, 5, 9, 6, 9, 7, 9, //Cross inside plane
+							4, 9, 5, 9, 6, 9, 7, 9, //Cross inside plane
 
-						0, 10, 3, 10, 4, 10, 7, 10, //Cross inside plane
+							0, 10, 3, 10, 4, 10, 7, 10, //Cross inside plane
 
-						1, 11, 2, 11, 5, 11, 6, 11, //Cross inside plane
+							1, 11, 2, 11, 5, 11, 6, 11, //Cross inside plane
 
-						3, 12, 2, 12, 7, 12, 6, 12, //Cross inside plane
+							3, 12, 2, 12, 7, 12, 6, 12, //Cross inside plane
 
-						0, 13, 1, 13, 4, 13, 5, 13 //Cross inside plane
-						};
-	this->indices.insert(this->indices.end(), newIndices, newIndices + 60);
-
-	////Without cross
-	//int newIndices[12] = { 8, 14, //Normal
-	//	9, 15, //Normal
-	//	10, 16, //Normal
-	//	11, 17, //Normal
-	//	12, 18, //Normal
-	//	13, 19, //Normal
-	//};
-	//this->indices.insert(this->indices.end(), newIndices, newIndices + 12);
-
+							0, 13, 1, 13, 4, 13, 5, 13 //Cross inside plane
+		};
+		this->indices.insert(this->indices.end(), newIndices, newIndices + 60);
+	}
+	else {
+		////Without cross
+		int newIndices[12] = { 8, 14, //Normal
+			9, 15, //Normal
+			10, 16, //Normal
+			11, 17, //Normal
+			12, 18, //Normal
+			13, 19, //Normal
+		};
+		this->indices.insert(this->indices.end(), newIndices, newIndices + 12);
+	}
 }
 
 void viewFrustrum::frustrumToBoxes(glm::vec3& viewDirection)

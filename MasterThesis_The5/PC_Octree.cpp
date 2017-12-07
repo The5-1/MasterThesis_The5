@@ -128,8 +128,193 @@ void PC_Octree::drawPointCloud()
 
 }
 
-void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum vF)
+bool PC_Octree::onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point) {
+	if (glm::dot(normal, (corner - point)) > 0) {
+		return true;
+	}
+
+	return false;
+}
+
+
+int PC_Octree::boxFrstrumCull(Octree& leaf, glm::vec3& normal, glm::vec3& point) {
+	//Return 0 if box inside frustrum
+	//Return 1 if box outside frustrum
+	//Return 2 if box cuts Frustrum
+
+	int counter = 0;
+
+	if (!onCorrectPlaneSide(leaf.minLeafBox, normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(leaf.maxLeafBox, normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.minLeafBox.x, leaf.minLeafBox.y, leaf.maxLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.minLeafBox.x, leaf.maxLeafBox.y, leaf.minLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.maxLeafBox.x, leaf.minLeafBox.y, leaf.minLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.minLeafBox.x, leaf.maxLeafBox.y, leaf.maxLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.maxLeafBox.x, leaf.minLeafBox.y, leaf.maxLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (!onCorrectPlaneSide(glm::vec3(leaf.maxLeafBox.x, leaf.maxLeafBox.y, leaf.minLeafBox.z), normal, point)) {
+		counter++;
+	}
+
+	if (counter == 0) {
+		return 0;
+	}
+
+	if (counter == 8) {
+		return 1;
+	}
+
+	return 2;
+}
+
+void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 {
+	bool inside = false, outside = false;
+	int inOutTest = -1;
+
+	//1
+	inOutTest = boxFrstrumCull(leaf, vF.farNormal, vF.farPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+	//2
+	inOutTest = boxFrstrumCull(leaf, vF.nearNormal, vF.nearPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+	//3
+	inOutTest = boxFrstrumCull(leaf, vF.leftNormal, vF.leftPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+	//4
+	inOutTest = boxFrstrumCull(leaf, vF.rightNormal, vF.rightPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+
+	//5
+	inOutTest = boxFrstrumCull(leaf, vF.upNormal, vF.upPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+	//6
+	inOutTest = boxFrstrumCull(leaf, vF.downNormal, vF.downPoint);
+	if (inOutTest == 1) {
+		//Box is compeltely outside of a plane, we can stop here
+		return;
+	}
+	else if (inOutTest == 2) {
+		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
+		if (leaf.children.size() == 0) {
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
+		}
+		return;
+	}
+
+	//Box inside Frsutrum 
+	this->addBoxToDraw(leaf, glm::vec3(0.0f, 0.0f, 1.0f));
+	return;
+}
+
+void PC_Octree::addBoxToDraw(Octree& leaf, glm::vec3 color) {
+	glm::mat4 modelMatrix;
+	this->getAabbLeafUniforms(modelMatrix, leaf);
+	modelMatrixLowestLeaf.push_back(modelMatrix);
+	
+	leaf.boxColorId = colorLowestLeaf.size();
+	colorLowestLeaf.push_back(color);
+}
+
+void PC_Octree::initViewFrustrumCull(Octree& leaf, viewFrustrum& vF) {
+	std::cout << "initViewFrstrumCull: Start culling" << std::endl;
+	this->modelMatrixLowestLeaf.clear();
+	this->colorLowestLeaf.clear();
+
+	this->cullWithViewFrustrum(leaf, vF);
 }
 
 /* *********************************************************************************************************

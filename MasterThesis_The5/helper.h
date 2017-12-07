@@ -105,15 +105,16 @@ public:
 	void draw();
 	void change(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
 
-	void getPlaneNormal();
+	void getPlaneNormal(bool drawCrossPlanes);
 
 	void frustrumToBoxes(glm::vec3& viewDirection);
 
-protected:
+
 	
 	//Normals of the 6 planes of the Frustrum (all should point inwards
 	glm::vec3 nearNormal, farNormal, leftNormal, rightNormal, upNormal, downNormal;
-
+	glm::vec3 nearPoint, farPoint, leftPoint, rightPoint, upPoint, downPoint;
+protected:
 	vector<unsigned int> indices;
 	vector<glm::vec3> vertices;
 	vector<glm::vec3> color;

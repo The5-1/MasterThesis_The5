@@ -94,7 +94,15 @@ public:
 	void uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals);
 	void drawPointCloud();
 
-	void cullWithViewFrustrum(Octree& leaf, viewFrustrum vF);
+	bool onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point);
+
+	int boxFrstrumCull(Octree & leaf, glm::vec3 & normal, glm::vec3 & point);
+
+	void cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF);
+
+	void addBoxToDraw(Octree & leaf, glm::vec3 color);
+
+	void initViewFrustrumCull(Octree & leaf, viewFrustrum & vF);
 
 private:
 	void splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices);
