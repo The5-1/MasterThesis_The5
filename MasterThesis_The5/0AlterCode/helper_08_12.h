@@ -101,13 +101,8 @@ class viewFrustrum
 public:
 	viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix, int frustrumToBoxes, glm::vec3& viewDirection);
 	~viewFrustrum();
-
 	void upload();
 	void draw();
-
-	void uploadQuad();
-	void drawQuad();
-
 	void change(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::mat4& projMatrix);
 
 	void getPlaneNormal(bool drawCrossPlanes);
@@ -124,15 +119,10 @@ protected:
 	vector<glm::vec3> vertices;
 	vector<glm::vec3> color;
 
-	vector<unsigned int> indicesQuads;
-	vector<glm::vec3> verticesQuads;
-	vector<glm::vec3> colorQuads;
-
 	//Split Frustrum into Boxes (mainly for visual, has no other use)
 	int numBoxes;
 
 	GLuint vbo[3];
-	GLuint vboQuad[3];
 };
 
 // very simple geometry

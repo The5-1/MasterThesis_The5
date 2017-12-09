@@ -63,7 +63,6 @@ Shader basicShader;
 Shader modelLoaderShader;
 Shader simpleSplatShader;
 Shader basicColorShader;
-Shader pointShader;
 
 //Skybox
 Shader skyboxShader;
@@ -80,11 +79,7 @@ bool backfaceCull = false;
 bool drawOctreeBox = false;
 bool setViewFrustrum = false;
 bool showFrustrumCull = false;
-bool fillViewFrustrum = false;
 glm::vec3 lightDir;
-
-typedef enum { QUAD_SPLATS,  POINTS_GL} SPLAT_TYPE;
-SPLAT_TYPE m_currenSplatDraw = QUAD_SPLATS;
 
 /* *********************************************************************************************************
 TweakBar
@@ -93,22 +88,14 @@ void setupTweakBar() {
 	TwInit(TW_OPENGL_CORE, NULL);
 	tweakBar = TwNewBar("Settings");
 
-	TwAddSeparator(tweakBar, "Splat Draw", nullptr);
-	TwEnumVal Splats[] = { { QUAD_SPLATS, "QUAD_SPLATS" },{ POINTS_GL, "POINTS_GL" } };
-	TwType SplatsTwType = TwDefineEnum("MeshType", Splats, 2);
-	TwAddVarRW(tweakBar, "Splats", SplatsTwType, &m_currenSplatDraw, NULL);
-
-	TwAddSeparator(tweakBar, "Utility", nullptr);
 	TwAddSeparator(tweakBar, "Wireframe", nullptr);
 	TwAddVarRW(tweakBar, "Wireframe Teapot", TW_TYPE_BOOLCPP, &wireFrameTeapot, " label='Wireframe Teapot' ");
 	TwAddVarRW(tweakBar, "Backface Cull", TW_TYPE_BOOLCPP, &backfaceCull, " label='Backface Cull' ");
 
-	TwAddSeparator(tweakBar, "Octree", nullptr);
 	TwAddVarRW(tweakBar, "Octree Box", TW_TYPE_BOOLCPP, &drawOctreeBox, " label='Octree Box' ");
 
 	TwAddSeparator(tweakBar, "Set Viewfrustrum", nullptr);
 	TwAddVarRW(tweakBar, "ViewFrustrum", TW_TYPE_BOOLCPP, &setViewFrustrum, " label='ViewFrustrum' ");
-	TwAddVarRW(tweakBar, "Fill Frustrum", TW_TYPE_BOOLCPP, &fillViewFrustrum, " label='Fill Frustrum' ");
 	TwAddVarRW(tweakBar, "Frustrum Cull", TW_TYPE_BOOLCPP, &showFrustrumCull, " label='Frustrum Cull' ");
 
 	//// Array of drop down items
@@ -281,8 +268,6 @@ void loadShader(bool init) {
 	modelLoaderShader = Shader("./shader/modelLoader.vs.glsl", "./shader/modelLoader.fs.glsl");
 	skyboxShader = Shader("./shader/skybox.vs.glsl", "./shader/skybox.fs.glsl");
 	simpleSplatShader = Shader("./shader/simpleSplat.vs.glsl", "./shader/simpleSplat.fs.glsl", "./shader/simpleSplat.gs.glsl");
-
-	pointShader = Shader("./shader/point.vs.glsl", "./shader/point.fs.glsl");
 }
 
 /* *********************************************************************************************************
@@ -361,47 +346,27 @@ void sponzaStandardScene(){
 	}
 
 
-	
+	simpleSplatShader.enable();
 	if (wireFrameTeapot) {
 		glPolygonMode(GL_FRONT, GL_LINE);
 		glPolygonMode(GL_BACK, GL_LINE);
 	}
 	
-	switch (m_currenSplatDraw) {
-	case(QUAD_SPLATS):
-		simpleSplatShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		simpleSplatShader.uniform("modelMatrix", modelMatrix);
-		simpleSplatShader.uniform("viewMatrix", viewMatrix);
-		simpleSplatShader.uniform("projMatrix", projMatrix);
-		simpleSplatShader.uniform("col", glm::vec3(1.0f, 0.0f, 0.0f));
-		octree->drawPointCloud();
-		simpleSplatShader.disable();
-		break;
-	case(POINTS_GL):
-		glEnable(GL_BLEND); 
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	modelMatrix = glm::scale(glm::vec3(1.0f));
+	simpleSplatShader.uniform("modelMatrix", modelMatrix);
+	simpleSplatShader.uniform("viewMatrix", viewMatrix);
+	simpleSplatShader.uniform("projMatrix", projMatrix);
 
-		glEnable(GL_POINT_SPRITE);
-		glEnable(GL_PROGRAM_POINT_SIZE);
+	simpleSplatShader.uniform("col", glm::vec3(1.0f, 0.0f, 0.0f));
 
-		pointShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		pointShader.uniform("modelMatrix", modelMatrix);
-		pointShader.uniform("viewMatrix", viewMatrix);
-		pointShader.uniform("projMatrix", projMatrix);
-		pointShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
-		octree->drawPointCloud();
-		pointShader.disable();
-		glDisable(GL_POINT_SPRITE);
-		glDisable(GL_PROGRAM_POINT_SIZE);
-		break;
-	}
+	octree->drawPointCloud();
+
 	if (wireFrameTeapot) {
 		glPolygonMode(GL_FRONT, GL_FILL);
 		glPolygonMode(GL_BACK, GL_FILL);
 	}
-	
+	simpleSplatShader.disable();
 
 	/* ********************************************
 	View Frustrum
@@ -411,13 +376,7 @@ void sponzaStandardScene(){
 		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
 		//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
 		viewfrustrum->getPlaneNormal(false);
-
-		if (fillViewFrustrum) {
-			viewfrustrum->uploadQuad();
-		}
-		else {
-			viewfrustrum->upload();
-		}
+		viewfrustrum->upload();
 	}
 
 	basicColorShader.enable();
@@ -425,14 +384,7 @@ void sponzaStandardScene(){
 	basicColorShader.uniform("modelMatrix", modelMatrix);
 	basicColorShader.uniform("viewMatrix", viewMatrix);
 	basicColorShader.uniform("projMatrix", projMatrix);
-
-	if (fillViewFrustrum) {
-		viewfrustrum->drawQuad();
-	} 
-	else{
-		viewfrustrum->draw();
-	}
-
+	viewfrustrum->draw();
 	basicColorShader.disable();
 
 	basicShader.enable();

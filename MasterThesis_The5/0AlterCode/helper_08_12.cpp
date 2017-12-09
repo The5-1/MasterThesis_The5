@@ -1180,6 +1180,7 @@ void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::
 		2, 6,
 		3, 7 };
 
+
 	this->color = { glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
 
@@ -1378,7 +1379,6 @@ void viewFrustrum::frustrumToBoxes(glm::vec3& viewDirection)
 viewFrustrum::~viewFrustrum()
 {
 	glDeleteBuffers(3, this->vbo);
-	glDeleteBuffers(3, this->vboQuad);
 }
 
 void viewFrustrum::upload()
@@ -1409,71 +1409,6 @@ void viewFrustrum::draw()
 
 	glDrawElements(GL_LINES, this->indices.size(), GL_UNSIGNED_INT, 0);
 	//glDrawElements(GL_QUADS, this->indices.size(), GL_UNSIGNED_INT, 0);
-}
-
-void viewFrustrum::uploadQuad()
-{
-	//Indices for Quad
-	this->indicesQuads = { 0, 1, 2, 3,
-							4, 5, 6, 7,
-							0, 3, 7, 4,
-							1, 2, 6, 5,
-							3, 2, 6, 7,
-							0, 1, 5, 4
-							};
-
-	this->verticesQuads.resize(8);
-	this->verticesQuads[0] = this->vertices[0] + 0.001f * (this->nearNormal + this->leftNormal + this->downNormal);
-	this->verticesQuads[1] = this->vertices[1] + 0.001f * (this->nearNormal + this->rightNormal + this->downNormal);
-	this->verticesQuads[2] = this->vertices[2] + 0.001f * (this->nearNormal + this->rightNormal + this->upNormal);
-	this->verticesQuads[3] = this->vertices[3] + 0.001f * (this->nearNormal + this->leftNormal + this->upNormal);
-												   
-	this->verticesQuads[4] = this->vertices[4] + 0.001f * (this->farNormal + this->leftNormal + this->downNormal);
-	this->verticesQuads[5] = this->vertices[5] + 0.001f * (this->farNormal + this->rightNormal + this->downNormal);
-	this->verticesQuads[6] = this->vertices[6] + 0.001f * (this->farNormal + this->rightNormal + this->upNormal);
-	this->verticesQuads[7] = this->vertices[7] + 0.001f * (this->farNormal + this->leftNormal + this->upNormal);
-
-	this->colorQuads = { glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-							glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-
-							glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-							glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), };
-
-	//Turn the draw line color to white
-	for (int i = 0; i < 8; i++) {
-		this->color[i] = glm::vec3(1.0f, 1.0f, 1.0f);
-	}
-
-	this->upload();
-
-	glGenBuffers(3, this->vboQuad);
-
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboQuad[0]);
-	glBufferData(GL_ARRAY_BUFFER, this->verticesQuads.size() * sizeof(float) * 3, this->verticesQuads.data(), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboQuad[1]);
-	glBufferData(GL_ARRAY_BUFFER, this->colorQuads.size() * sizeof(float) * 3, this->colorQuads.data(), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vboQuad[2]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indicesQuads.size() * sizeof(unsigned int), this->indicesQuads.data(), GL_STATIC_DRAW);
-	
-}
-
-void viewFrustrum::drawQuad()
-{
-	this->draw();
-
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboQuad[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vboQuad[1]);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->vboQuad[2]);
-
-	glDrawElements(GL_QUADS, this->indicesQuads.size(), GL_UNSIGNED_INT, 0);
 }
 
 
