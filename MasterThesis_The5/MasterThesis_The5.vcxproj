@@ -134,6 +134,7 @@
     </ClInclude>
     <ClInclude Include="nanoflannHelper.h" />
     <ClInclude Include="Node.h" />
+    <ClInclude Include="ObjToPcd.h" />
     <ClInclude Include="PC_Octree.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Skybox.h" />

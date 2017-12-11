@@ -24,6 +24,7 @@
 #include <time.h>       /* time */
 
 #include "PC_Octree.h"
+#include "ObjToPcd.h"
 
 //Octree
 PC_Octree* octree = 0;
@@ -239,6 +240,8 @@ void init() {
 		teaPot->vertices[i] = 2.0f * teaPot->vertices[i];
 	}
 
+	objToPcd(teaPot->vertices, teaPot->normals);
+
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
@@ -391,6 +394,11 @@ void sponzaStandardScene(){
 		pointShader.uniform("viewMatrix", viewMatrix);
 		pointShader.uniform("projMatrix", projMatrix);
 		pointShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+
+		pointShader.uniform("nearPlane", 1.0f);
+		pointShader.uniform("farPlane", 500.0f);
+		pointShader.uniform("viewPoint", glm::vec3(cam.position));
+
 		octree->drawPointCloud();
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);

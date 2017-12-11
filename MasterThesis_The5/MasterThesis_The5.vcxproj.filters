@@ -111,6 +111,9 @@
     <ClInclude Include="Node.h">
       <Filter>PC-Octree</Filter>
     </ClInclude>
+    <ClInclude Include="ObjToPcd.h">
+      <Filter>PC-Octree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HalfEdgeMesh.cpp">
