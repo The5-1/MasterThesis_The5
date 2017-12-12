@@ -71,6 +71,8 @@ Shader skyboxShader;
 
 //Models
 simpleModel *teaPot = 0;
+solidSphere *sphere = 0;
+
 coordinateSystem *coordSysstem = 0;
 viewFrustrum * viewfrustrum = 0;
 
@@ -242,11 +244,26 @@ void init() {
 
 	objToPcd(teaPot->vertices, teaPot->normals);
 
+	sphere = new solidSphere(1.0f, 30, 30);
+	std::vector<glm::vec3> sphereNormals;
+	for (int i = 0; i < sphere->vertices.size(); i++) {
+		sphereNormals.push_back(sphere->vertices[i]);
+		sphere->vertices[i] = 3.0f * sphere->vertices[i];
+	}
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
-	octree = new PC_Octree(teaPot->vertices, teaPot->normals, 10);
+	std::vector<glm::vec3> bigVertices, bigNormals;
+	std::vector<float> bigRadii;
+
+	loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/Kompie8/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/bigTeapotVNA_100.big");
+	//loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/Kompie8/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/cityFront.big");
+
+	octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
+	//octree = new PC_Octree(teaPot->vertices, teaPot->normals, bigRadii, 10);
+	//octree = new PC_Octree(sphere->vertices, sphereNormals, 100);
 	
+
 	int counter = 0;
 	for (int i = 0; i < 8; i++) {
 		if (octree->root.bitMaskChildren[i] == 1) {

@@ -53,7 +53,7 @@ public:
 	glm::vec3 minBoundingBox, maxBoundingBox;
 
 	//OpenGL PointCloud
-	GLuint vboPC[4];
+	GLuint vboPC[5];
 	std::vector<int> vertexIndexList;
 	std::vector<glm::vec3> vertexColorList; //For Debug, delete later
 
@@ -82,7 +82,7 @@ public:
 //Functions
 public:
 	PC_Octree();
-	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, int _maxVerticesPerQuad);
+	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad);
 
 	~PC_Octree();
 
@@ -91,7 +91,7 @@ public:
 
 	void drawBox();
 
-	void uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals);
+	void uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius);
 	void drawPointCloud();
 
 	bool onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point);

@@ -12,7 +12,7 @@ PC_Octree::PC_Octree()
 {
 }
 
-PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, int _maxVerticesPerQuad)
+PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad)
 {
 	this->getAABB(minBoundingBox, maxBoundingBox, _vertices);
 
@@ -40,7 +40,7 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& 
 
 	this->splitLeaf(this->root, _vertices);
 
-	this->uploadPointCloud(_vertices, _normals);
+	this->uploadPointCloud(_vertices, _normals, _radius);
 }
 
 PC_Octree::~PC_Octree()
@@ -90,9 +90,9 @@ void PC_Octree::drawBox()
 	glPolygonMode(GL_BACK, GL_FILL);
 }
 
-void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals)
+void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius)
 {
-	glGenBuffers(4, vboPC);
+	glGenBuffers(5, vboPC);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboPC[0]);
 	glBufferData(GL_ARRAY_BUFFER, _vertices.size() * sizeof(float) * 3, _vertices.data(), GL_STATIC_DRAW);
@@ -104,7 +104,12 @@ void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<
 	glBufferData(GL_ARRAY_BUFFER, vertexColorList.size() * sizeof(float) * 3, vertexColorList.data(), GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vboPC[3]);
+	glBufferData(GL_ARRAY_BUFFER, _radius.size() * sizeof(float), _radius.data(), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[4]);
 	glBufferData(GL_ARRAY_BUFFER, vertexIndexList.size() * sizeof(unsigned int), vertexIndexList.data(), GL_STATIC_DRAW);
+
+	
 }
 
 void PC_Octree::drawPointCloud()
@@ -121,11 +126,12 @@ void PC_Octree::drawPointCloud()
 	glBindBuffer(GL_ARRAY_BUFFER, vboPC[2]);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboPC[3]);
+	glEnableVertexAttribArray(3);
+	glBindBuffer(GL_ARRAY_BUFFER, vboPC[3]);
+	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboPC[4]);
 	glDrawElements(GL_POINTS, vertexIndexList.size(), GL_UNSIGNED_INT, 0);
-
-	//glDrawArrays(GL_POINTS, 0, vertexIndexList.size());
-
 }
 
 bool PC_Octree::onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point) {

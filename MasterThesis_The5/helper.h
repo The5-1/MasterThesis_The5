@@ -177,10 +177,11 @@ public:
 	~solidSphere();
 	void upload();
 	void draw();
+
+	vector<glm::vec3> vertices;
 protected:
 	vector<unsigned int> indices;
 	vector<glm::vec2> uvs;
-	vector<glm::vec3> vertices;
 	GLuint vbo[3];
 };
 
