@@ -9,8 +9,9 @@ uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
 uniform vec3 col;
-
 uniform vec3 viewPoint;
+
+uniform float glPointSize;
 
 out vec4 viewNormal;
 out vec3 color;
@@ -40,7 +41,7 @@ void main() {
 	
 	//Constant point size
 	//gl_PointSize = 500.0f * vRadius * (1.0-gl_Position.z/gl_Position.w);
-	gl_PointSize = 80.0f*(1.0 - gl_Position.z/gl_Position.w);
+	gl_PointSize = glPointSize * (1.0 - gl_Position.z/gl_Position.w);
 	//View-Dependant point size
 	//gl_PointSize = 50.0f;
 

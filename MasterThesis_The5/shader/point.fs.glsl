@@ -21,7 +21,7 @@ void main(){
 	/* ******************************************************************
 	Fill FBO
 	****************************************************************** */
-	outNormal = vec4(viewNormal.xyz, 1.0);
+	outNormal = vec4(0.5 * viewNormal.xyz + vec3(0.5), 1.0);
 	outPos = vec4(positionFBO.xyz/positionFBO.w, 1.0);
 
 	/* ******************************************************************
@@ -67,18 +67,24 @@ void main(){
 		//IMPORTANT: Changed one of them to positive -> seems to fix the error that they are displaced (doesnt matter which is positive for teapot/sphere)
 		float delta_z = (+ ((viewNormal.x ) / (viewNormal.z )) * circCoord.x - ((viewNormal.y ) / (viewNormal.z )) * circCoord.y);
 
-		float radius = 0.8;
-		if(length( vec3(circCoord.x, circCoord.y, delta_z) ) > radius)
+		float maxRadius = 1.0;
+		float currentRadius = length( vec3(circCoord.x, circCoord.y, delta_z) );
+		if(currentRadius > maxRadius)
 		{
+			//outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
 			discard;
 		}
-		else if(length( vec3(circCoord.x, circCoord.y, delta_z) ) >= 0.9 * radius)
+		else if(currentRadius >= 0.9 * maxRadius)
 		{
 			outColor = abs(vec4(0.0, 0.0, 0.0, 1.0));
+ 
 		}
 		else{
-			outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
+			outColor = abs(vec4(color, 1.0));
+			//outColor = abs(vec4(0.0, 1.0, 0.0, 1.0));
 		}
+		//Update depth
+		gl_FragDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w ; 
 	#endif
 
 	/* ******************************************************************
@@ -97,9 +103,7 @@ void main(){
 		}                                                       
 		else{														
 			outColor = vec4(1.0, 0.0, 0.0, 1.0);  
-		}
-
-		gl_FragDepth = gl_FragCoord.z + 0.01*(1.0-pow(c, 2.0)) * gl_FragCoord.w ;   
+		} 
 	#endif
 
 

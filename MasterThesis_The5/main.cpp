@@ -91,8 +91,9 @@ bool drawOctreeBox = false;
 bool setViewFrustrum = false;
 bool showFrustrumCull = false;
 bool fillViewFrustrum = false;
+bool debugView = true;
 glm::vec3 lightDir;
-
+float glPointSizeFloat = 80.0f;
 typedef enum { QUAD_SPLATS,  POINTS_GL} SPLAT_TYPE;
 SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 
@@ -107,6 +108,7 @@ void setupTweakBar() {
 	TwEnumVal Splats[] = { { QUAD_SPLATS, "QUAD_SPLATS" },{ POINTS_GL, "POINTS_GL" } };
 	TwType SplatsTwType = TwDefineEnum("MeshType", Splats, 2);
 	TwAddVarRW(tweakBar, "Splats", SplatsTwType, &m_currenSplatDraw, NULL);
+	TwAddVarRW(tweakBar, "glPointSize", TW_TYPE_FLOAT, &glPointSizeFloat, " label='glPointSize' min=0.0 step=10.0 max=1000.0");
 
 	TwAddSeparator(tweakBar, "Utility", nullptr);
 	TwAddSeparator(tweakBar, "Wireframe", nullptr);
@@ -120,6 +122,9 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "ViewFrustrum", TW_TYPE_BOOLCPP, &setViewFrustrum, " label='ViewFrustrum' ");
 	TwAddVarRW(tweakBar, "Fill Frustrum", TW_TYPE_BOOLCPP, &fillViewFrustrum, " label='Fill Frustrum' ");
 	TwAddVarRW(tweakBar, "Frustrum Cull", TW_TYPE_BOOLCPP, &showFrustrumCull, " label='Frustrum Cull' ");
+
+	TwAddSeparator(tweakBar, "Debug Options", nullptr);
+	TwAddVarRW(tweakBar, "Debug", TW_TYPE_BOOLCPP, &debugView, " label='Debug' ");
 
 	//// Array of drop down items
 	//TwEnumVal Operations[] = { { SPLIT, "SPLIT" },{ FLIP, "FLIP" },{ COLLAPSE, "COLLAPSE" }};
@@ -463,6 +468,8 @@ void standardScene(){
 		pointShader.uniform("farPlane", 500.0f);
 		pointShader.uniform("viewPoint", glm::vec3(cam.position));
 
+		pointShader.uniform("glPointSize", glPointSizeFloat);
+
 		octree->drawPointCloud();
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);
@@ -669,6 +676,8 @@ void standardSceneFBO() {
 			pointShader.uniform("farPlane", 500.0f);
 			pointShader.uniform("viewPoint", glm::vec3(cam.position));
 
+			pointShader.uniform("glPointSize", glPointSizeFloat);
+
 			octree->drawPointCloud();
 			pointShader.disable();
 			glDisable(GL_POINT_SPRITE);
@@ -790,8 +799,14 @@ void display() {
 		glutSetWindowTitle(timeString);
 	}
 
-	//standardScene();
-	standardSceneFBO();
+	if (debugView) { 
+		standardSceneFBO(); 
+	}
+	else { 
+		standardScene(); 
+	}
+
+	
 
 	TwDraw(); //Draw Tweak-Bar
 
