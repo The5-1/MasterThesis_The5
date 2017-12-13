@@ -3,19 +3,27 @@ How to use glPoints: https://stackoverflow.com/questions/27098315/render-large-c
 */
 
 #version 330
-layout(location = 0)  out vec4 out0; // color 
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outNormal;
+layout(location = 2) out vec4 outPos;
 
 uniform float nearPlane;
 uniform float farPlane;
 
 in vec4 viewNormal;
 in vec3 color;
-
+in vec4 positionFBO;
 //#define SIMPLE_POINT 0
 #define AFFINE_PROJECTED 0
 //#define POTREE 0
 
 void main(){ 
+	/* ******************************************************************
+	Fill FBO
+	****************************************************************** */
+	outNormal = vec4(viewNormal.xyz, 1.0);
+	outPos = vec4(positionFBO.xyz/positionFBO.w, 1.0);
+
 	/* ******************************************************************
 		Paint simple Point
 	****************************************************************** */
@@ -34,13 +42,13 @@ void main(){
 		//}
 		
 		
-		//out0 = abs(vec4(vec3(circCoord.s, circCoord.t, 0.0)*alpha, 1.0));
-		//out0 = vec4(1.0)*alpha;
-		out0 = vec4(color,1.0);
+		//outColor = abs(vec4(vec3(circCoord.s, circCoord.t, 0.0)*alpha, 1.0));
+		//outColor = vec4(1.0)*alpha;
+		outColor = vec4(color,1.0);
 
 		
-		//out0 = abs(vec4(1.0, 0.0, 0.0, 1.0));
-		//out0 = vec4(alpha, 1);
+		//outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
+		//outColor = vec4(alpha, 1);
 	#endif
 
 	/* ******************************************************************
@@ -66,10 +74,10 @@ void main(){
 		}
 		else if(length( vec3(circCoord.x, circCoord.y, delta_z) ) >= 0.9 * radius)
 		{
-			out0 = abs(vec4(0.0, 0.0, 0.0, 1.0));
+			outColor = abs(vec4(0.0, 0.0, 0.0, 1.0));
 		}
 		else{
-			out0 = abs(vec4(1.0, 0.0, 0.0, 1.0));
+			outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
 		}
 	#endif
 
@@ -85,10 +93,10 @@ void main(){
 			discard;                                               
 		}
 		else if(c < 0.2){
-			out0 = abs(vec4(0.0, 0.0, 0.0, 1.0));
+			outColor = abs(vec4(0.0, 0.0, 0.0, 1.0));
 		}                                                       
 		else{														
-			out0 = vec4(1.0, 0.0, 0.0, 1.0);  
+			outColor = vec4(1.0, 0.0, 0.0, 1.0);  
 		}
 
 		gl_FragDepth = gl_FragCoord.z + 0.01*(1.0-pow(c, 2.0)) * gl_FragCoord.w ;   

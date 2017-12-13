@@ -14,13 +14,15 @@ uniform vec3 viewPoint;
 
 out vec4 viewNormal;
 out vec3 color;
+out vec4 positionFBO;
 
 #define BACKFACE_CULLING 0
 
 //Pointsize
-#define PS_BASIC 0
-#define PS_CONSTANT 0
-#define PS_LION 0
+//#define PS_BASIC 0
+//#define PS_CONSTANT 0
+//#define PS_LION 0
+
 void main() {
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
 	viewNormal =  normalMatrix * vec4(vNormal, 1);
@@ -33,7 +35,7 @@ void main() {
 	vec4 posV = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
 	
 	//gl_PointSize = 15.0f;//*(1.0-posV.z);
-	
+	positionFBO = modelMatrix * vec4(vPosition, 1.0);
 	gl_Position = projMatrix * posV;
 	
 	//Constant point size

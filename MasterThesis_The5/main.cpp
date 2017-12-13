@@ -65,6 +65,10 @@ Shader modelLoaderShader;
 Shader simpleSplatShader;
 Shader basicColorShader;
 Shader pointShader;
+//FBO Shader
+Shader quadScreenSizedShader;
+Shader standardMiniColorFboShader;
+Shader standardMiniDepthFboShader;
 
 //Skybox
 Shader skyboxShader;
@@ -72,9 +76,12 @@ Shader skyboxShader;
 //Models
 simpleModel *teaPot = 0;
 solidSphere *sphere = 0;
-
+simpleQuad * quad = 0;
 coordinateSystem *coordSysstem = 0;
 viewFrustrum * viewfrustrum = 0;
+
+//Frame buffer object
+FBO *fbo = 0;
 
 // tweak bar
 TwBar *tweakBar;
@@ -87,7 +94,7 @@ bool fillViewFrustrum = false;
 glm::vec3 lightDir;
 
 typedef enum { QUAD_SPLATS,  POINTS_GL} SPLAT_TYPE;
-SPLAT_TYPE m_currenSplatDraw = QUAD_SPLATS;
+SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 
 /* *********************************************************************************************************
 TweakBar
@@ -230,7 +237,11 @@ void init() {
 	//load_VTKfile();
 	//upload_VTKfile();
 
-
+	/*****************************************************************
+	Screen-Quad
+	*****************************************************************/
+	quad = new simpleQuad();
+	quad->upload();
 
 	/*****************************************************************
 	obj-Models
@@ -313,6 +324,12 @@ void init() {
 	Skybox (Only for aesthetic reasons, can be deleted)
 	*****************************************************************/
 	skybox.createSkybox(negz, posz, posy, negy, negx, posx);
+
+	/*****************************************************************
+	FBO
+	*****************************************************************/
+	fbo = new FBO("Gbuffer", WIDTH, HEIGHT, FBO_GBUFFER_32BIT);
+	gl_check_error("fbo 1");
 }
 
 
@@ -322,14 +339,23 @@ void loadShader(bool init) {
 	modelLoaderShader = Shader("./shader/modelLoader.vs.glsl", "./shader/modelLoader.fs.glsl");
 	skyboxShader = Shader("./shader/skybox.vs.glsl", "./shader/skybox.fs.glsl");
 	simpleSplatShader = Shader("./shader/simpleSplat.vs.glsl", "./shader/simpleSplat.fs.glsl", "./shader/simpleSplat.gs.glsl");
-
 	pointShader = Shader("./shader/point.vs.glsl", "./shader/point.fs.glsl");
+
+	//FBO
+	quadScreenSizedShader = Shader("./shader/FboShader/quadScreenSized.vs.glsl", "./shader/FboShader/quadScreenSized.fs.glsl");
+	standardMiniColorFboShader = Shader("./shader/FboShader/standardMiniColorFBO.vs.glsl", "./shader/FboShader/standardMiniColorFBO.fs.glsl");
+	standardMiniDepthFboShader = Shader("./shader/FboShader/standardMiniDepthFBO.vs.glsl", "./shader/FboShader/standardMiniDepthFBO.fs.glsl");
 }
 
 /* *********************************************************************************************************
 Scenes: Unit cube + Pointcloud
 ********************************************************************************************************* */
-void sponzaStandardScene(){
+void standardScene(){
+	//Clear
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glClearColor(0.3f, 0.3f, 0.3f, 1);
+
 	/* ********************************************
 	modelMatrix
 	**********************************************/
@@ -526,6 +552,228 @@ void sponzaStandardScene(){
 	//basicShader.disable();
 }	
 
+
+void standardSceneFBO() {
+	/* #### FBO ####*/
+	fbo->Bind();
+	{
+		//Clear
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.3f, 0.3f, 0.3f, 1);
+
+		/* ********************************************
+		modelMatrix
+		**********************************************/
+		glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
+
+		/* ********************************************
+		Draw Skybox (Disable Culling, else we loose skybox!)
+		**********************************************/
+		glDisable(GL_CULL_FACE);
+
+		//skyboxShader.enable();
+		//skyboxShader.uniform("projMatrix", projMatrix);
+		//skyboxShader.uniform("viewMatrix", cam.cameraRotation);
+		//skybox.Draw(skyboxShader);
+		//skyboxShader.disable();
+
+		/* ********************************************
+		Coordinate System
+		**********************************************/
+		basicColorShader.enable();
+		modelMatrix = glm::scale(glm::vec3(1.0f));
+		basicColorShader.uniform("modelMatrix", modelMatrix);
+		basicColorShader.uniform("viewMatrix", viewMatrix);
+		basicColorShader.uniform("projMatrix", projMatrix);
+		coordSysstem->draw();
+		basicColorShader.disable();
+
+		/* ********************************************
+		Octree
+		**********************************************/
+		if (drawOctreeBox) {
+			basicShader.enable();
+
+
+			basicShader.uniform("viewMatrix", viewMatrix);
+			basicShader.uniform("projMatrix", projMatrix);
+
+			//Draw Single Box
+			//octree->getAabbUniforms(modelMatrix);
+			//basicShader.uniform("modelMatrix", modelMatrix);
+			//basicShader.uniform("col", glm::vec3(1.0f, 0.0f, 1.0f));
+			//octree->drawBox();
+
+			//Draw first level of boxes
+			//for (int i = 0; i < modelMatrixOctree.size(); i++) {
+			//	basicShader.uniform("modelMatrix", modelMatrixOctree[i]);
+			//	basicShader.uniform("col", colorOctree[i]);
+			//	octree->drawBox();
+			//}
+
+			//Draw finest level of boxes
+			for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+				basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+				basicShader.uniform("col", octree->colorLowestLeaf[i]);
+				octree->drawBox();
+			}
+
+			basicShader.disable();
+		}
+
+		/* ********************************************
+		Simple Splat
+		**********************************************/
+		if (backfaceCull) {
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT);
+		}
+		else {
+			glDisable(GL_CULL_FACE);
+		}
+
+
+
+		if (wireFrameTeapot) {
+			glPolygonMode(GL_FRONT, GL_LINE);
+			glPolygonMode(GL_BACK, GL_LINE);
+		}
+
+		switch (m_currenSplatDraw) {
+		case(QUAD_SPLATS):
+			simpleSplatShader.enable();
+			modelMatrix = glm::scale(glm::vec3(1.0f));
+			simpleSplatShader.uniform("modelMatrix", modelMatrix);
+			simpleSplatShader.uniform("viewMatrix", viewMatrix);
+			simpleSplatShader.uniform("projMatrix", projMatrix);
+			simpleSplatShader.uniform("col", glm::vec3(1.0f, 0.0f, 0.0f));
+			octree->drawPointCloud();
+			simpleSplatShader.disable();
+			break;
+		case(POINTS_GL):
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glEnable(GL_POINT_SPRITE);
+			glEnable(GL_PROGRAM_POINT_SIZE);
+
+			pointShader.enable();
+			modelMatrix = glm::scale(glm::vec3(1.0f));
+			pointShader.uniform("modelMatrix", modelMatrix);
+			pointShader.uniform("viewMatrix", viewMatrix);
+			pointShader.uniform("projMatrix", projMatrix);
+			pointShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+
+			pointShader.uniform("nearPlane", 1.0f);
+			pointShader.uniform("farPlane", 500.0f);
+			pointShader.uniform("viewPoint", glm::vec3(cam.position));
+
+			octree->drawPointCloud();
+			pointShader.disable();
+			glDisable(GL_POINT_SPRITE);
+			glDisable(GL_PROGRAM_POINT_SIZE);
+			break;
+		}
+		if (wireFrameTeapot) {
+			glPolygonMode(GL_FRONT, GL_FILL);
+			glPolygonMode(GL_BACK, GL_FILL);
+		}
+
+
+		/* ********************************************
+		View Frustrum
+		**********************************************/
+		if (setViewFrustrum) {
+			setViewFrustrum = false;
+			viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
+			//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
+			viewfrustrum->getPlaneNormal(false);
+
+			if (fillViewFrustrum) {
+				viewfrustrum->uploadQuad();
+			}
+			else {
+				viewfrustrum->upload();
+			}
+		}
+
+		basicColorShader.enable();
+		modelMatrix = glm::scale(glm::vec3(1.0f));
+		basicColorShader.uniform("modelMatrix", modelMatrix);
+		basicColorShader.uniform("viewMatrix", viewMatrix);
+		basicColorShader.uniform("projMatrix", projMatrix);
+
+		if (fillViewFrustrum) {
+			viewfrustrum->drawQuad();
+		}
+		else {
+			viewfrustrum->draw();
+		}
+
+		basicColorShader.disable();
+
+		basicShader.enable();
+		basicShader.uniform("viewMatrix", viewMatrix);
+		basicShader.uniform("projMatrix", projMatrix);
+		if (showFrustrumCull) {
+			octree->initViewFrustrumCull(octree->root, *viewfrustrum);
+			for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+				basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+				basicShader.uniform("col", octree->colorLowestLeaf[i]);
+				octree->drawBox();
+			}
+		}
+		basicShader.disable();
+	}
+	fbo->Unbind();
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
+
+	/* #### FBO End #### */
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(0);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.5f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 1.0f));
+	quad->draw();
+	fbo->unbindTexture(0);
+	standardMiniColorFboShader.disable();
+
+	//Depth
+	standardMiniDepthFboShader.enable();
+	fbo->bindDepth();
+	standardMiniDepthFboShader.uniform("tex", 0);
+	standardMiniDepthFboShader.uniform("downLeft", glm::vec2(0.5f, 0.5f));
+	standardMiniDepthFboShader.uniform("upRight", glm::vec2(1.0f, 1.0f));
+	quad->draw();
+	fbo->unbindDepth();
+	standardMiniDepthFboShader.disable();
+
+	//Normal
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(1);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.0f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 0.5f));
+	quad->draw();
+	fbo->unbindTexture(1);
+	standardMiniColorFboShader.disable();
+
+	//Position
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(2);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.5f, 0.0f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(1.0f, 0.5f));
+	quad->draw();
+	fbo->unbindTexture(2);
+	standardMiniColorFboShader.disable();
+}
+
 /* *********************************************************************************************************
 Display + Main
 ********************************************************************************************************* */
@@ -542,13 +790,9 @@ void display() {
 		glutSetWindowTitle(timeString);
 	}
 
-	//OpenGL Clears
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
+	//standardScene();
+	standardSceneFBO();
 
-	glClearColor(0.3f, 0.3f, 0.3f, 1);
-	
-	sponzaStandardScene();
 	TwDraw(); //Draw Tweak-Bar
 
 	glutSwapBuffers();
