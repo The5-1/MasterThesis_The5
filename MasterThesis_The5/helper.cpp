@@ -876,9 +876,11 @@ solidSphere::solidSphere(const float r, const int slices, const int stacks) {
 	//  | /   |
 	//  v1--- v3
 
+	std::cout << "IMPORTANT: helper.cpp, solidSphere has been changed (not useable for triangle meshes anymore)!" << std::endl;
+
 	for (int j=1; j < slices-1; j++) 
 	{
-		for (int i = stacks; i>=0; i--)  //POINTCLOUD: Remove this = to stop the double point glitch
+		for (int i = stacks; i>0; i--)  //POINTCLOUD: Remove this = to stop the double point glitch
 		{    			
 			glm::vec2 t = glm::vec2 (1-i*dTheta/(2.0*M_PI),(M_PI-(j+1)*dPhi)/M_PI); 
 			glm::vec3 p = glm::vec3 (r*sin((j+1)*dPhi)*cos(i*dTheta), r*cos((j+1)*dPhi), r*sin((j+1)*dPhi)*sin(i*dTheta));

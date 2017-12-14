@@ -70,6 +70,9 @@ Shader quadScreenSizedShader;
 Shader standardMiniColorFboShader;
 Shader standardMiniDepthFboShader;
 
+//Filter
+Shader gaussFilterShader;
+
 //Skybox
 Shader skyboxShader;
 
@@ -82,6 +85,7 @@ viewFrustrum * viewfrustrum = 0;
 
 //Frame buffer object
 FBO *fbo = 0;
+FBO *fbo2 = 0;
 
 // tweak bar
 TwBar *tweakBar;
@@ -92,9 +96,11 @@ bool setViewFrustrum = false;
 bool showFrustrumCull = false;
 bool fillViewFrustrum = false;
 bool debugView = true;
-glm::vec3 lightDir;
+bool useGaussFilter = false;
+int filterPasses = 5;
+glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
 float glPointSizeFloat = 80.0f;
-typedef enum { QUAD_SPLATS,  POINTS_GL} SPLAT_TYPE;
+typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE;
 SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 
 /* *********************************************************************************************************
@@ -109,6 +115,7 @@ void setupTweakBar() {
 	TwType SplatsTwType = TwDefineEnum("MeshType", Splats, 2);
 	TwAddVarRW(tweakBar, "Splats", SplatsTwType, &m_currenSplatDraw, NULL);
 	TwAddVarRW(tweakBar, "glPointSize", TW_TYPE_FLOAT, &glPointSizeFloat, " label='glPointSize' min=0.0 step=10.0 max=1000.0");
+	TwAddVarRW(tweakBar, "Light Position", TW_TYPE_DIR3F, &lightPos, "label='Light Position'");
 
 	TwAddSeparator(tweakBar, "Utility", nullptr);
 	TwAddSeparator(tweakBar, "Wireframe", nullptr);
@@ -122,6 +129,10 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "ViewFrustrum", TW_TYPE_BOOLCPP, &setViewFrustrum, " label='ViewFrustrum' ");
 	TwAddVarRW(tweakBar, "Fill Frustrum", TW_TYPE_BOOLCPP, &fillViewFrustrum, " label='Fill Frustrum' ");
 	TwAddVarRW(tweakBar, "Frustrum Cull", TW_TYPE_BOOLCPP, &showFrustrumCull, " label='Frustrum Cull' ");
+
+	TwAddSeparator(tweakBar, "Filter", nullptr);
+	TwAddVarRW(tweakBar, "Use Gauss", TW_TYPE_BOOLCPP, &useGaussFilter, " label='Use Gauss' ");
+	TwAddVarRW(tweakBar, "Passes", TW_TYPE_INT16, &filterPasses, " label='Passes' min=0 step=1 max=100");
 
 	TwAddSeparator(tweakBar, "Debug Options", nullptr);
 	TwAddVarRW(tweakBar, "Debug", TW_TYPE_BOOLCPP, &debugView, " label='Debug' ");
@@ -189,7 +200,7 @@ void load_VTKfile() {
 	}
 
 	fclose(file);
-	
+
 }
 
 void upload_VTKfile() {
@@ -211,7 +222,7 @@ void draw_VTKfile() {
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
-void delete_VTKfile(){
+void delete_VTKfile() {
 	glDeleteBuffers(2, vbo);
 	indices.clear();
 	vertices.clear();
@@ -219,14 +230,14 @@ void delete_VTKfile(){
 
 
 std::vector<glm::vec3> colorOctree = { glm::vec3(1.0f, 0.0f, 0.0f),
-										glm::vec3(1.0f, 0.6f, 0.0f),
-										glm::vec3(0.0f, 0.5f, 0.5f),
-										glm::vec3(1.0f, 1.0f, 1.0f),
-										glm::vec3(0.0f, 1.0f, 0.0f),
-										glm::vec3(0.0f, 0.0f, 0.0f),
-										glm::vec3(1.0f, 0.0f, 1.0f),
-										glm::vec3(0.0f, 0.0f, 1.0f),
-									};
+glm::vec3(1.0f, 0.6f, 0.0f),
+glm::vec3(0.0f, 0.5f, 0.5f),
+glm::vec3(1.0f, 1.0f, 1.0f),
+glm::vec3(0.0f, 1.0f, 0.0f),
+glm::vec3(0.0f, 0.0f, 0.0f),
+glm::vec3(1.0f, 0.0f, 1.0f),
+glm::vec3(0.0f, 0.0f, 1.0f),
+};
 
 std::vector<glm::mat4> modelMatrixOctree;
 
@@ -259,7 +270,7 @@ void init() {
 	//}
 	//objToPcd(teaPot->vertices, teaPot->normals);
 
-	
+
 	/*****************************************************************
 	obj-Models
 	*****************************************************************/
@@ -280,7 +291,7 @@ void init() {
 	//
 	//}
 	//octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 100);
-	
+
 	/*************
 	***TeaPot
 	**************/
@@ -298,7 +309,7 @@ void init() {
 		sphere->vertices[i] = 3.0f * sphere->vertices[i];
 	}
 	octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
-	
+
 
 
 	int counter = 0;
@@ -334,7 +345,10 @@ void init() {
 	FBO
 	*****************************************************************/
 	fbo = new FBO("Gbuffer", WIDTH, HEIGHT, FBO_GBUFFER_32BIT);
-	gl_check_error("fbo 1");
+	gl_check_error("fbo");
+
+	fbo2 = new FBO("Gbuffer", WIDTH, HEIGHT, FBO_GBUFFER_32BIT);
+	gl_check_error("fbo2");
 }
 
 
@@ -350,12 +364,13 @@ void loadShader(bool init) {
 	quadScreenSizedShader = Shader("./shader/FboShader/quadScreenSized.vs.glsl", "./shader/FboShader/quadScreenSized.fs.glsl");
 	standardMiniColorFboShader = Shader("./shader/FboShader/standardMiniColorFBO.vs.glsl", "./shader/FboShader/standardMiniColorFBO.fs.glsl");
 	standardMiniDepthFboShader = Shader("./shader/FboShader/standardMiniDepthFBO.vs.glsl", "./shader/FboShader/standardMiniDepthFBO.fs.glsl");
+	gaussFilterShader = Shader("./shader/Filter/gaussFilter.vs.glsl", "./shader/Filter/gaussFilter.fs.glsl");
 }
 
 /* *********************************************************************************************************
 Scenes: Unit cube + Pointcloud
 ********************************************************************************************************* */
-void standardScene(){
+void standardScene() {
 	//Clear
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
@@ -394,7 +409,7 @@ void standardScene(){
 	if (drawOctreeBox) {
 		basicShader.enable();
 
-		
+
 		basicShader.uniform("viewMatrix", viewMatrix);
 		basicShader.uniform("projMatrix", projMatrix);
 
@@ -433,12 +448,12 @@ void standardScene(){
 	}
 
 
-	
+
 	if (wireFrameTeapot) {
 		glPolygonMode(GL_FRONT, GL_LINE);
 		glPolygonMode(GL_BACK, GL_LINE);
 	}
-	
+
 	switch (m_currenSplatDraw) {
 	case(QUAD_SPLATS):
 		simpleSplatShader.enable();
@@ -451,7 +466,7 @@ void standardScene(){
 		simpleSplatShader.disable();
 		break;
 	case(POINTS_GL):
-		glEnable(GL_BLEND); 
+		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glEnable(GL_POINT_SPRITE);
@@ -467,7 +482,7 @@ void standardScene(){
 		pointShader.uniform("nearPlane", 1.0f);
 		pointShader.uniform("farPlane", 500.0f);
 		pointShader.uniform("viewPoint", glm::vec3(cam.position));
-
+		
 		pointShader.uniform("glPointSize", glPointSizeFloat);
 
 		octree->drawPointCloud();
@@ -480,7 +495,7 @@ void standardScene(){
 		glPolygonMode(GL_FRONT, GL_FILL);
 		glPolygonMode(GL_BACK, GL_FILL);
 	}
-	
+
 
 	/* ********************************************
 	View Frustrum
@@ -507,8 +522,8 @@ void standardScene(){
 
 	if (fillViewFrustrum) {
 		viewfrustrum->drawQuad();
-	} 
-	else{
+	}
+	else {
 		viewfrustrum->draw();
 	}
 
@@ -527,8 +542,8 @@ void standardScene(){
 	}
 	basicShader.disable();
 
-	
-	
+
+
 
 	///* ********************************************
 	//VTK-Mesh
@@ -557,7 +572,7 @@ void standardScene(){
 	//}
 
 	//basicShader.disable();
-}	
+}
 
 
 void standardSceneFBO() {
@@ -675,7 +690,7 @@ void standardSceneFBO() {
 			pointShader.uniform("nearPlane", 1.0f);
 			pointShader.uniform("farPlane", 500.0f);
 			pointShader.uniform("viewPoint", glm::vec3(cam.position));
-
+			pointShader.uniform("lightPos", lightPos);
 			pointShader.uniform("glPointSize", glPointSizeFloat);
 
 			octree->drawPointCloud();
@@ -737,12 +752,139 @@ void standardSceneFBO() {
 	}
 	fbo->Unbind();
 
+
+	/* #### FBO End #### */
+	//GaussFilter
+	if (useGaussFilter) {
+		for (int i = 0; i < filterPasses; i++) {
+			fbo2->Bind();
+			{
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDisable(GL_DEPTH_TEST);
+				glClearColor(0.3f, 0.3f, 0.3f, 1);
+				gaussFilterShader.enable();
+
+				glActiveTexture(GL_TEXTURE0);
+				fbo->bindTexture(0);
+				gaussFilterShader.uniform("texColor", 0);
+				/*glActiveTexture(GL_TEXTURE1);
+				fbo->bindTexture(1);
+				gaussFilterShader.uniform("texNormal", 1);
+				glActiveTexture(GL_TEXTURE2);
+				fbo->bindTexture(2);
+				gaussFilterShader.uniform("texPosition", 2);
+				glActiveTexture(GL_TEXTURE3);
+				fbo->bindDepth();
+				gaussFilterShader.uniform("texDepth", 3);*/
+
+				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+				gaussFilterShader.uniform("radius", 1.0f);
+				gaussFilterShader.uniform("dir", glm::vec2(1.0f, 0.0f));
+				quad->draw();
+
+				fbo->unbindTexture(0);
+				fbo->unbindTexture(1);
+				fbo->unbindTexture(2);
+				fbo->unbindDepth();
+				glActiveTexture(GL_TEXTURE0);
+
+				gaussFilterShader.disable();
+			}
+			fbo2->Unbind();
+
+			fbo->Bind();
+			{
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDisable(GL_DEPTH_TEST);
+				glClearColor(0.3f, 0.3f, 0.3f, 1);
+				gaussFilterShader.enable();
+
+				glActiveTexture(GL_TEXTURE0);
+				fbo2->bindTexture(0);
+				gaussFilterShader.uniform("texColor", 0);
+				/*glActiveTexture(GL_TEXTURE1);
+				fbo2->bindTexture(1);
+				gaussFilterShader.uniform("texNormal", 1);
+				glActiveTexture(GL_TEXTURE2);
+				fbo2->bindTexture(2);
+				gaussFilterShader.uniform("texPosition", 2);
+				glActiveTexture(GL_TEXTURE3);
+				fbo2->bindDepth();
+				gaussFilterShader.uniform("texDepth", 3);*/
+
+				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+				gaussFilterShader.uniform("radius", 1.0f);
+				gaussFilterShader.uniform("dir", glm::vec2(0.0f, 1.0f));
+				quad->draw();
+
+				fbo2->unbindTexture(0);
+				fbo2->unbindTexture(1);
+				fbo2->unbindTexture(2);
+				fbo2->unbindDepth();
+				glActiveTexture(GL_TEXTURE0);
+				gaussFilterShader.disable();
+			}
+			fbo->Unbind();
+		}
+	}
+	////Render to screen
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glEnable(GL_DEPTH_TEST);
+	//glDisable(GL_CULL_FACE);
+	//glClearColor(0.2f, 0.2f, 0.2f, 1);
+
+	////Color
+	//standardMiniColorFboShader.enable();
+	//glActiveTexture(GL_TEXTURE0);
+	//fbo2->bindTexture(0);
+	//standardMiniColorFboShader.uniform("tex", 0);
+	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.5f));
+	//standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 1.0f));
+	//quad->draw();
+	//fbo2->unbindTexture(0);
+	//standardMiniColorFboShader.disable();
+	//
+	////Depth
+	//standardMiniDepthFboShader.enable();
+	//glActiveTexture(GL_TEXTURE0);
+	//fbo2->bindDepth();
+	//standardMiniDepthFboShader.uniform("tex", 0);
+	//standardMiniDepthFboShader.uniform("downLeft", glm::vec2(0.5f, 0.5f));
+	//standardMiniDepthFboShader.uniform("upRight", glm::vec2(1.0f, 1.0f));
+	//quad->draw();
+	//fbo2->unbindDepth();
+	//standardMiniDepthFboShader.disable();
+	//
+	////Normal
+	//standardMiniColorFboShader.enable();
+	//glActiveTexture(GL_TEXTURE0);
+	//fbo2->bindTexture(1);
+	//standardMiniColorFboShader.uniform("tex", 0);
+	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.0f));
+	//standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 0.5f));
+	//quad->draw();
+	//fbo2->unbindTexture(1);
+	//standardMiniColorFboShader.disable();
+	//
+	////Position
+	//standardMiniColorFboShader.enable();
+	//glActiveTexture(GL_TEXTURE0);
+	//fbo2->bindTexture(2);
+	//standardMiniColorFboShader.uniform("tex", 0);
+	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.5f, 0.0f));
+	//standardMiniColorFboShader.uniform("upRight", glm::vec2(1.0f, 0.5f));
+	//quad->draw();
+	//fbo2->unbindTexture(2);
+	//standardMiniColorFboShader.disable();
+
+	//Render to screen
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	glClearColor(0.2f, 0.2f, 0.2f, 1);
-
-	/* #### FBO End #### */
+	//Color
 	standardMiniColorFboShader.enable();
 	fbo->bindTexture(0);
 	standardMiniColorFboShader.uniform("tex", 0);
@@ -799,14 +941,14 @@ void display() {
 		glutSetWindowTitle(timeString);
 	}
 
-	if (debugView) { 
-		standardSceneFBO(); 
+	if (debugView) {
+		standardSceneFBO();
 	}
-	else { 
-		standardScene(); 
+	else {
+		standardScene();
 	}
 
-	
+
 
 	TwDraw(); //Draw Tweak-Bar
 
@@ -857,7 +999,7 @@ int main(int argc, char** argv) {
 	//delete_VTKfile();
 
 
-return 0;
+	return 0;
 }
 
 

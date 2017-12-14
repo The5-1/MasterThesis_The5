@@ -10,14 +10,18 @@ uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
 uniform vec3 col;
 uniform vec3 viewPoint;
+uniform vec3 lightPos;
+
 
 uniform float glPointSize;
 
 out vec4 viewNormal;
+out vec4 viewPosition;
 out vec3 color;
 out vec4 positionFBO;
+out vec3 lightVecV;
 
-#define BACKFACE_CULLING 0
+//#define BACKFACE_CULLING 0
 
 //Pointsize
 //#define PS_BASIC 0
@@ -26,18 +30,21 @@ out vec4 positionFBO;
 
 void main() {
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
-	viewNormal =  normalMatrix * vec4(vNormal, 1);
+	viewNormal =  normalMatrix * vec4(vNormal, 0.0); //homogenous coordinate = 0 for vectors
 
 	//mat3 normalMatrix = inverse(transpose(mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz)));
 	//viewNormal =  vec4(normalize(normalMatrix * vNormal), 1);
 
 	color = vColor;
 		
-	vec4 posV = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
+	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
 	
-	//gl_PointSize = 15.0f;//*(1.0-posV.z);
+	lightVecV = (viewMatrix * vec4(normalize(lightPos - vPosition),0.0)).xyz; //for vectors homogenous coordinate = 0
+	//lightVecV = (viewMatrix * vec4(normalize(vec3(10.0,10.0,0.0)-vPosition),0.0)).xyz; //for vectors homogenous coordinate = 0
+
+	//gl_PointSize = 15.0f;//*(1.0-viewPosition.z);
 	positionFBO = modelMatrix * vec4(vPosition, 1.0);
-	gl_Position = projMatrix * posV;
+	gl_Position = projMatrix * viewPosition;
 	
 	//Constant point size
 	//gl_PointSize = 500.0f * vRadius * (1.0-gl_Position.z/gl_Position.w);
@@ -47,9 +54,9 @@ void main() {
 
 	/*
 	float uPointSizeMultiplicator = 10.0f;
-	float trans = 0.5 + max(length(posV)-10.0, 0.0) / 30.0;
-	vec4 p1 = projMatrix * posV;
-	vec4 p2 = projMatrix * (posV + vec4(trans,trans,0.0,0.0));
+	float trans = 0.5 + max(length(viewPosition)-10.0, 0.0) / 30.0;
+	vec4 p1 = projMatrix * viewPosition;
+	vec4 p2 = projMatrix * (viewPosition + vec4(trans,trans,0.0,0.0));
 	p1.xyz = p1.xyz / p1.w;
 	p2.xyz = p2.xyz / p1.w;
 	vec2 dist = p1.xy - p2.xy;

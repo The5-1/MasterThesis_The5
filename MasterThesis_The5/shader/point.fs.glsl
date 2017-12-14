@@ -1,7 +1,6 @@
 /* GUIDES:
 How to use glPoints: https://stackoverflow.com/questions/27098315/render-large-circular-points-in-modern-opengl
 */
-
 #version 330
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outNormal;
@@ -11,11 +10,19 @@ uniform float nearPlane;
 uniform float farPlane;
 
 in vec4 viewNormal;
+in vec4 viewPosition;
 in vec3 color;
 in vec4 positionFBO;
+
+in vec3 lightVecV;
+
+//Render type (only 1 may be active!!)
 //#define SIMPLE_POINT 0
 #define AFFINE_PROJECTED 0
 //#define POTREE 0
+
+//Lighting
+#define PHONG 0
 
 void main(){ 
 	/* ******************************************************************
@@ -23,6 +30,8 @@ void main(){
 	****************************************************************** */
 	outNormal = vec4(0.5 * viewNormal.xyz + vec3(0.5), 1.0);
 	outPos = vec4(positionFBO.xyz/positionFBO.w, 1.0);
+	//outPos = vec4(viewPosition.xyz/viewPosition.w, 1.0);
+	
 
 	/* ******************************************************************
 		Paint simple Point
@@ -55,14 +64,7 @@ void main(){
 		Affinely Projected Point Sprites (Page 278)
 	****************************************************************** */
 	#ifdef AFFINE_PROJECTED
-		//vec2 circCoord = 0.5 * gl_PointCoord - vec2(0.5, 0.5); //FALSE
 		vec2 circCoord = 2.0 * gl_PointCoord - vec2(1.0, 1.0); //Maps to [-1, 1]
-		//vec2 circCoord = gl_PointCoord;
-
-		//float delta_z = - ((viewNormal.x / viewNormal.w) / (viewNormal.z / viewNormal.w)) * circCoord.x - ((viewNormal.y / viewNormal.w) / (viewNormal.z / viewNormal.w)) * circCoord.y;
-		//float delta_z = (- ((viewNormal.x ) / (viewNormal.z )) * circCoord.x - ((viewNormal.y ) / (viewNormal.z )) * circCoord.y);
-		//vec3 viewN = normalize( vec3(viewNormal) );
-		//float delta_z = - ((viewN.x ) / (viewN.z )) * circCoord.x - ((viewN.y ) / (viewN.z )) * circCoord.y;
 
 		//IMPORTANT: Changed one of them to positive -> seems to fix the error that they are displaced (doesnt matter which is positive for teapot/sphere)
 		float delta_z = (+ ((viewNormal.x ) / (viewNormal.z )) * circCoord.x - ((viewNormal.y ) / (viewNormal.z )) * circCoord.y);
@@ -76,13 +78,22 @@ void main(){
 		}
 		else if(currentRadius >= 0.9 * maxRadius)
 		{
-			outColor = abs(vec4(0.0, 0.0, 0.0, 1.0));
- 
+			outColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+			#ifdef PHONG
+			outColor = vec4(0.0, 0.0, 0.0, 1.0) * vec4(vec3(pow(max(0.0,dot(viewNormal.xyz, lightVecV)),4.0)),1.0);
+			#endif
 		}
 		else{
-			outColor = abs(vec4(color, 1.0));
-			//outColor = abs(vec4(0.0, 1.0, 0.0, 1.0));
+			outColor = vec4(color, 1.0);
+
+			#ifdef PHONG
+			outColor = vec4(color, 1.0) * vec4(vec3(pow(max(0.0,dot(viewNormal.xyz, lightVecV)),4.0)),1.0);
+			#endif
 		}
+
+		
+
 		//Update depth
 		gl_FragDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w ; 
 	#endif
