@@ -767,15 +767,15 @@ void standardSceneFBO() {
 				glActiveTexture(GL_TEXTURE0);
 				fbo->bindTexture(0);
 				gaussFilterShader.uniform("texColor", 0);
-				/*glActiveTexture(GL_TEXTURE1);
-				fbo->bindTexture(1);
+				glActiveTexture(GL_TEXTURE1);
+				fbo->bindTexture(1, 1);
 				gaussFilterShader.uniform("texNormal", 1);
 				glActiveTexture(GL_TEXTURE2);
-				fbo->bindTexture(2);
+				fbo->bindTexture(2, 2);
 				gaussFilterShader.uniform("texPosition", 2);
 				glActiveTexture(GL_TEXTURE3);
-				fbo->bindDepth();
-				gaussFilterShader.uniform("texDepth", 3);*/
+				fbo->bindDepth(3);
+				gaussFilterShader.uniform("texDepth", 3);
 
 				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
 				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
@@ -801,17 +801,17 @@ void standardSceneFBO() {
 				gaussFilterShader.enable();
 
 				glActiveTexture(GL_TEXTURE0);
-				fbo2->bindTexture(0);
+				fbo2->bindTexture(0, 0);
 				gaussFilterShader.uniform("texColor", 0);
-				/*glActiveTexture(GL_TEXTURE1);
-				fbo2->bindTexture(1);
+				glActiveTexture(GL_TEXTURE1);
+				fbo2->bindTexture(1, 1);
 				gaussFilterShader.uniform("texNormal", 1);
 				glActiveTexture(GL_TEXTURE2);
-				fbo2->bindTexture(2);
+				fbo2->bindTexture(2, 2);
 				gaussFilterShader.uniform("texPosition", 2);
 				glActiveTexture(GL_TEXTURE3);
-				fbo2->bindDepth();
-				gaussFilterShader.uniform("texDepth", 3);*/
+				fbo2->bindDepth(3);
+				gaussFilterShader.uniform("texDepth", 3);
 
 				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
 				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);

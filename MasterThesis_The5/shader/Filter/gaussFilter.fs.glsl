@@ -8,8 +8,8 @@ in vec2 vTexCoord;
 
 //declare uniforms
 uniform sampler2D texColor;
-//uniform sampler2D texNormal;
-//uniform sampler2D texPosition;
+uniform sampler2D texNormal;
+uniform sampler2D texPosition;
 uniform sampler2D texDepth;
 
 uniform float resolutionWIDTH;
@@ -17,8 +17,13 @@ uniform float resolutionHEIGHT;
 uniform float radius;
 uniform vec2 dir;
 
-void main() {
-    
+//Pointsize
+//#define COLOR_FILTER 0
+//#define NORMAL_FILTER 0
+//#define POS_FILTER 0
+//#define DEPTH_FILTER 0
+
+vec3 filterTexture(sampler2D texture){
 	//this will be our RGBA sum
 	vec4 sum = vec4(0.0);
 	
@@ -39,21 +44,37 @@ void main() {
     
 	//apply blurring, using a 9-tap filter with predefined gaussian weights
 
-	sum += texture2D(texColor, vec2(tc.x - 4.0*blurWidth*hstep, tc.y - 4.0*blurHeight*vstep)) * 0.0162162162;
-	sum += texture2D(texColor, vec2(tc.x - 3.0*blurWidth*hstep, tc.y - 3.0*blurHeight*vstep)) * 0.0540540541;
-	sum += texture2D(texColor, vec2(tc.x - 2.0*blurWidth*hstep, tc.y - 2.0*blurHeight*vstep)) * 0.1216216216;
-	sum += texture2D(texColor, vec2(tc.x - 1.0*blurWidth*hstep, tc.y - 1.0*blurHeight*vstep)) * 0.1945945946;
+	sum += texture2D(texture, vec2(tc.x - 4.0*blurWidth*hstep, tc.y - 4.0*blurHeight*vstep)) * 0.0162162162;
+	sum += texture2D(texture, vec2(tc.x - 3.0*blurWidth*hstep, tc.y - 3.0*blurHeight*vstep)) * 0.0540540541;
+	sum += texture2D(texture, vec2(tc.x - 2.0*blurWidth*hstep, tc.y - 2.0*blurHeight*vstep)) * 0.1216216216;
+	sum += texture2D(texture, vec2(tc.x - 1.0*blurWidth*hstep, tc.y - 1.0*blurHeight*vstep)) * 0.1945945946;
 	
-	sum += texture2D(texColor, vec2(tc.x, tc.y)) * 0.2270270270;
+	sum += texture2D(texture, vec2(tc.x, tc.y)) * 0.2270270270;
 	
-	sum += texture2D(texColor, vec2(tc.x + 1.0*blurWidth*hstep, tc.y + 1.0*blurHeight*vstep)) * 0.1945945946;
-	sum += texture2D(texColor, vec2(tc.x + 2.0*blurWidth*hstep, tc.y + 2.0*blurHeight*vstep)) * 0.1216216216;
-	sum += texture2D(texColor, vec2(tc.x + 3.0*blurWidth*hstep, tc.y + 3.0*blurHeight*vstep)) * 0.0540540541;
-	sum += texture2D(texColor, vec2(tc.x + 4.0*blurWidth*hstep, tc.y + 4.0*blurHeight*vstep)) * 0.0162162162;
+	sum += texture2D(texture, vec2(tc.x + 1.0*blurWidth*hstep, tc.y + 1.0*blurHeight*vstep)) * 0.1945945946;
+	sum += texture2D(texture, vec2(tc.x + 2.0*blurWidth*hstep, tc.y + 2.0*blurHeight*vstep)) * 0.1216216216;
+	sum += texture2D(texture, vec2(tc.x + 3.0*blurWidth*hstep, tc.y + 3.0*blurHeight*vstep)) * 0.0540540541;
+	sum += texture2D(texture, vec2(tc.x + 4.0*blurWidth*hstep, tc.y + 4.0*blurHeight*vstep)) * 0.0162162162;
 
-	//discard alpha for our simple demo, multiply by vertex color and return
-	outColor = vec4(sum.rgb, 1.0);
-    //outNormal = vec4(texture2D(texNormal, tc).rgb, 1.0);
-    //outPos = vec4(texture2D(texPosition, tc).rgb, 1.0);
-    outDepth = vec4(vec3(texture2D(texDepth, tc).r), 1.0);
+	return sum.rgb;
+}
+
+void main() {
+	//Color
+ 	//outColor = vec4(texture2D(texColor, vTexCoord).rgb, 1.0);
+	outColor = vec4( filterTexture(texColor), 1.0);
+
+	//Normal
+    outNormal = vec4(texture2D(texNormal, vTexCoord).rgb, 1.0);
+	outNormal = vec4( filterTexture(texNormal), 1.0);
+
+	//Position
+    outPos = vec4(texture2D(texPosition, vTexCoord).rgb, 1.0);
+	outPos = vec4( filterTexture(texPosition), 1.0);
+
+	//Depth
+    outDepth = vec4(vec3(texture2D(texDepth, vTexCoord).r), 1.0);
+	outDepth = vec4( filterTexture(texDepth), 1.0);
+
+
 }
