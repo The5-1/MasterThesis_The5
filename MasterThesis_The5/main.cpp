@@ -69,9 +69,13 @@ Shader pointShader;
 Shader quadScreenSizedShader;
 Shader standardMiniColorFboShader;
 Shader standardMiniDepthFboShader;
+//FBO Shader
+Shader pointGbufferShader;
+Shader pointDeferredShader;
 
 //Filter
 Shader gaussFilterShader;
+
 
 //Skybox
 Shader skyboxShader;
@@ -100,8 +104,9 @@ bool useGaussFilter = false;
 int filterPasses = 5;
 glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
 float glPointSizeFloat = 80.0f;
-typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE;
-SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
+
+typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
+typedef enum { SIMPLE, DEBUG, DEFERRED } RENDER_TYPE; RENDER_TYPE m_currenRender = DEFERRED;
 
 /* *********************************************************************************************************
 TweakBar
@@ -135,14 +140,9 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "Passes", TW_TYPE_INT16, &filterPasses, " label='Passes' min=0 step=1 max=100");
 
 	TwAddSeparator(tweakBar, "Debug Options", nullptr);
-	TwAddVarRW(tweakBar, "Debug", TW_TYPE_BOOLCPP, &debugView, " label='Debug' ");
-
-	//// Array of drop down items
-	//TwEnumVal Operations[] = { { SPLIT, "SPLIT" },{ FLIP, "FLIP" },{ COLLAPSE, "COLLAPSE" }};
-	//// ATB identifier for the array
-	//TwType TwOperations = TwDefineEnum("Operations", Operations, 3);
-	//// Link it to the tweak bar
-	//TwAddVarRW(tweakBar, "Operations", TwOperations, &m_operation, NULL);
+	TwEnumVal render[] = { {SIMPLE, "SIMPLE"}, {DEBUG, "DEBUG"}, {DEFERRED, "DEFERRED"} };
+	TwType renderTwType = TwDefineEnum("renderType", render, 3);
+	TwAddVarRW(tweakBar, "render", renderTwType, &m_currenRender, NULL);
 }
 
 /* *********************************************************************************************************
@@ -359,6 +359,10 @@ void loadShader(bool init) {
 	skyboxShader = Shader("./shader/skybox.vs.glsl", "./shader/skybox.fs.glsl");
 	simpleSplatShader = Shader("./shader/simpleSplat.vs.glsl", "./shader/simpleSplat.fs.glsl", "./shader/simpleSplat.gs.glsl");
 	pointShader = Shader("./shader/point.vs.glsl", "./shader/point.fs.glsl");
+
+	//Deferred
+	pointGbufferShader = Shader("./shader/PointGbuffer/pointGbuffer.vs.glsl", "./shader/PointGbuffer/pointGbuffer.fs.glsl");
+	pointDeferredShader = Shader("./shader/PointGbuffer/pointDeferred.vs.glsl", "./shader/PointGbuffer/pointDeferred.fs.glsl");
 
 	//FBO
 	quadScreenSizedShader = Shader("./shader/FboShader/quadScreenSized.vs.glsl", "./shader/FboShader/quadScreenSized.fs.glsl");
@@ -829,55 +833,278 @@ void standardSceneFBO() {
 			fbo->Unbind();
 		}
 	}
-	////Render to screen
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glEnable(GL_DEPTH_TEST);
-	//glDisable(GL_CULL_FACE);
-	//glClearColor(0.2f, 0.2f, 0.2f, 1);
 
-	////Color
-	//standardMiniColorFboShader.enable();
-	//glActiveTexture(GL_TEXTURE0);
-	//fbo2->bindTexture(0);
-	//standardMiniColorFboShader.uniform("tex", 0);
-	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.5f));
-	//standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 1.0f));
-	//quad->draw();
-	//fbo2->unbindTexture(0);
-	//standardMiniColorFboShader.disable();
-	//
-	////Depth
-	//standardMiniDepthFboShader.enable();
-	//glActiveTexture(GL_TEXTURE0);
-	//fbo2->bindDepth();
-	//standardMiniDepthFboShader.uniform("tex", 0);
-	//standardMiniDepthFboShader.uniform("downLeft", glm::vec2(0.5f, 0.5f));
-	//standardMiniDepthFboShader.uniform("upRight", glm::vec2(1.0f, 1.0f));
-	//quad->draw();
-	//fbo2->unbindDepth();
-	//standardMiniDepthFboShader.disable();
-	//
-	////Normal
-	//standardMiniColorFboShader.enable();
-	//glActiveTexture(GL_TEXTURE0);
-	//fbo2->bindTexture(1);
-	//standardMiniColorFboShader.uniform("tex", 0);
-	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.0f));
-	//standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 0.5f));
-	//quad->draw();
-	//fbo2->unbindTexture(1);
-	//standardMiniColorFboShader.disable();
-	//
-	////Position
-	//standardMiniColorFboShader.enable();
-	//glActiveTexture(GL_TEXTURE0);
-	//fbo2->bindTexture(2);
-	//standardMiniColorFboShader.uniform("tex", 0);
-	//standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.5f, 0.0f));
-	//standardMiniColorFboShader.uniform("upRight", glm::vec2(1.0f, 0.5f));
-	//quad->draw();
-	//fbo2->unbindTexture(2);
-	//standardMiniColorFboShader.disable();
+	//Render to screen
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
+	//Color
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(0);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.5f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 1.0f));
+	quad->draw();
+	fbo->unbindTexture(0);
+	standardMiniColorFboShader.disable();
+
+	//Depth
+	standardMiniDepthFboShader.enable();
+	fbo->bindDepth();
+	standardMiniDepthFboShader.uniform("tex", 0);
+	standardMiniDepthFboShader.uniform("downLeft", glm::vec2(0.5f, 0.5f));
+	standardMiniDepthFboShader.uniform("upRight", glm::vec2(1.0f, 1.0f));
+	quad->draw();
+	fbo->unbindDepth();
+	standardMiniDepthFboShader.disable();
+
+	//Normal
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(1);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.0f, 0.0f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(0.5f, 0.5f));
+	quad->draw();
+	fbo->unbindTexture(1);
+	standardMiniColorFboShader.disable();
+
+	//Position
+	standardMiniColorFboShader.enable();
+	fbo->bindTexture(2);
+	standardMiniColorFboShader.uniform("tex", 0);
+	standardMiniColorFboShader.uniform("downLeft", glm::vec2(0.5f, 0.0f));
+	standardMiniColorFboShader.uniform("upRight", glm::vec2(1.0f, 0.5f));
+	quad->draw();
+	fbo->unbindTexture(2);
+	standardMiniColorFboShader.disable();
+}
+
+void standardSceneDeferred() {
+	/* #### FBO ####*/
+	fbo->Bind();
+	{
+		//Clear
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glClearColor(0.3f, 0.3f, 0.3f, 1);
+
+		/* ********************************************
+		modelMatrix
+		**********************************************/
+		glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
+
+		/* ********************************************
+		Draw Skybox (Disable Culling, else we loose skybox!)
+		**********************************************/
+		glDisable(GL_CULL_FACE);
+
+		//skyboxShader.enable();
+		//skyboxShader.uniform("projMatrix", projMatrix);
+		//skyboxShader.uniform("viewMatrix", cam.cameraRotation);
+		//skybox.Draw(skyboxShader);
+		//skyboxShader.disable();
+
+		/* ********************************************
+		Coordinate System
+		**********************************************/
+		basicColorShader.enable();
+		modelMatrix = glm::scale(glm::vec3(1.0f));
+		basicColorShader.uniform("modelMatrix", modelMatrix);
+		basicColorShader.uniform("viewMatrix", viewMatrix);
+		basicColorShader.uniform("projMatrix", projMatrix);
+		coordSysstem->draw();
+		basicColorShader.disable();
+
+		/* ********************************************
+		Octree
+		**********************************************/
+		if (drawOctreeBox) {
+			basicShader.enable();
+			basicShader.uniform("viewMatrix", viewMatrix);
+			basicShader.uniform("projMatrix", projMatrix);
+
+			for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+				basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+				basicShader.uniform("col", octree->colorLowestLeaf[i]);
+				octree->drawBox();
+			}
+
+			basicShader.disable();
+		}
+
+		/* ********************************************
+		Simple Splat
+		**********************************************/
+		if (backfaceCull) {
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT);
+		}
+		else {
+			glDisable(GL_CULL_FACE);
+		}
+
+
+
+		if (wireFrameTeapot) {
+			glPolygonMode(GL_FRONT, GL_LINE);
+			glPolygonMode(GL_BACK, GL_LINE);
+		}
+
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glEnable(GL_POINT_SPRITE);
+			glEnable(GL_PROGRAM_POINT_SIZE);
+
+			pointGbufferShader.enable();
+			modelMatrix = glm::scale(glm::vec3(1.0f));
+			pointGbufferShader.uniform("modelMatrix", modelMatrix);
+			pointGbufferShader.uniform("viewMatrix", viewMatrix);
+			pointGbufferShader.uniform("projMatrix", projMatrix);
+			pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+
+			pointGbufferShader.uniform("nearPlane", 1.0f);
+			pointGbufferShader.uniform("farPlane", 500.0f);
+			pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
+			pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
+
+			octree->drawPointCloud();
+			pointGbufferShader.disable();
+			glDisable(GL_POINT_SPRITE);
+			glDisable(GL_PROGRAM_POINT_SIZE);
+
+		if (wireFrameTeapot) {
+			glPolygonMode(GL_FRONT, GL_FILL);
+			glPolygonMode(GL_BACK, GL_FILL);
+		}
+
+
+		/* ********************************************
+		View Frustrum
+		**********************************************/
+		if (setViewFrustrum) {
+			setViewFrustrum = false;
+			viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
+			//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
+			viewfrustrum->getPlaneNormal(false);
+
+			if (fillViewFrustrum) {
+				viewfrustrum->uploadQuad();
+			}
+			else {
+				viewfrustrum->upload();
+			}
+		}
+
+		basicColorShader.enable();
+		modelMatrix = glm::scale(glm::vec3(1.0f));
+		basicColorShader.uniform("modelMatrix", modelMatrix);
+		basicColorShader.uniform("viewMatrix", viewMatrix);
+		basicColorShader.uniform("projMatrix", projMatrix);
+
+		if (fillViewFrustrum) {
+			viewfrustrum->drawQuad();
+		}
+		else {
+			viewfrustrum->draw();
+		}
+
+		basicColorShader.disable();
+
+		basicShader.enable();
+		basicShader.uniform("viewMatrix", viewMatrix);
+		basicShader.uniform("projMatrix", projMatrix);
+		if (showFrustrumCull) {
+			octree->initViewFrustrumCull(octree->root, *viewfrustrum);
+			for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+				basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+				basicShader.uniform("col", octree->colorLowestLeaf[i]);
+				octree->drawBox();
+			}
+		}
+		basicShader.disable();
+	}
+	fbo->Unbind();
+
+
+	/* #### FBO End #### */
+	//GaussFilter
+	if (false) {
+		for (int i = 0; i < filterPasses; i++) {
+			fbo2->Bind();
+			{
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDisable(GL_DEPTH_TEST);
+				glClearColor(0.3f, 0.3f, 0.3f, 1);
+				gaussFilterShader.enable();
+
+				glActiveTexture(GL_TEXTURE0);
+				fbo->bindTexture(0);
+				gaussFilterShader.uniform("texColor", 0);
+				glActiveTexture(GL_TEXTURE1);
+				fbo->bindTexture(1, 1);
+				gaussFilterShader.uniform("texNormal", 1);
+				glActiveTexture(GL_TEXTURE2);
+				fbo->bindTexture(2, 2);
+				gaussFilterShader.uniform("texPosition", 2);
+				glActiveTexture(GL_TEXTURE3);
+				fbo->bindDepth(3);
+				gaussFilterShader.uniform("texDepth", 3);
+
+				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+				gaussFilterShader.uniform("radius", 1.0f);
+				gaussFilterShader.uniform("dir", glm::vec2(1.0f, 0.0f));
+				quad->draw();
+
+				fbo->unbindTexture(0);
+				fbo->unbindTexture(1);
+				fbo->unbindTexture(2);
+				fbo->unbindDepth();
+				glActiveTexture(GL_TEXTURE0);
+
+				gaussFilterShader.disable();
+			}
+			fbo2->Unbind();
+
+			fbo->Bind();
+			{
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDisable(GL_DEPTH_TEST);
+				glClearColor(0.3f, 0.3f, 0.3f, 1);
+				gaussFilterShader.enable();
+
+				glActiveTexture(GL_TEXTURE0);
+				fbo2->bindTexture(0, 0);
+				gaussFilterShader.uniform("texColor", 0);
+				glActiveTexture(GL_TEXTURE1);
+				fbo2->bindTexture(1, 1);
+				gaussFilterShader.uniform("texNormal", 1);
+				glActiveTexture(GL_TEXTURE2);
+				fbo2->bindTexture(2, 2);
+				gaussFilterShader.uniform("texPosition", 2);
+				glActiveTexture(GL_TEXTURE3);
+				fbo2->bindDepth(3);
+				gaussFilterShader.uniform("texDepth", 3);
+
+				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+				gaussFilterShader.uniform("radius", 1.0f);
+				gaussFilterShader.uniform("dir", glm::vec2(0.0f, 1.0f));
+				quad->draw();
+
+				fbo2->unbindTexture(0);
+				fbo2->unbindTexture(1);
+				fbo2->unbindTexture(2);
+				fbo2->unbindDepth();
+				glActiveTexture(GL_TEXTURE0);
+				gaussFilterShader.disable();
+			}
+			fbo->Unbind();
+		}
+	}
 
 	//Render to screen
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -941,14 +1168,17 @@ void display() {
 		glutSetWindowTitle(timeString);
 	}
 
-	if (debugView) {
-		standardSceneFBO();
-	}
-	else {
+	switch (m_currenRender) {
+	case SIMPLE:
 		standardScene();
-	}
-
-
+		break;
+	case DEBUG:
+		standardSceneFBO();
+		break;
+	case DEFERRED:
+		standardSceneDeferred();
+		break;
+	};
 
 	TwDraw(); //Draw Tweak-Bar
 
