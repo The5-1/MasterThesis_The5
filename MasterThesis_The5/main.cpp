@@ -72,6 +72,7 @@ Shader standardMiniDepthFboShader;
 //FBO Shader
 Shader pointGbufferShader;
 Shader pointDeferredShader;
+Shader pointFuzzyShader;
 
 //Filter
 Shader gaussFilterShader;
@@ -104,7 +105,7 @@ bool useGaussFilter = false;
 int filterPasses = 5;
 glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
 float glPointSizeFloat = 80.0f;
-
+float depthEpsilonOffset = 0.0f;
 typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 typedef enum { SIMPLE, DEBUG, DEFERRED } RENDER_TYPE; RENDER_TYPE m_currenRender = DEFERRED;
 
@@ -120,6 +121,7 @@ void setupTweakBar() {
 	TwType SplatsTwType = TwDefineEnum("MeshType", Splats, 2);
 	TwAddVarRW(tweakBar, "Splats", SplatsTwType, &m_currenSplatDraw, NULL);
 	TwAddVarRW(tweakBar, "glPointSize", TW_TYPE_FLOAT, &glPointSizeFloat, " label='glPointSize' min=0.0 step=10.0 max=1000.0");
+	TwAddVarRW(tweakBar, "depthEpsilonOffset", TW_TYPE_FLOAT, &depthEpsilonOffset, " label='depthEpsilonOffset' min=-10.0 step=0.001 max=10.0");
 	TwAddVarRW(tweakBar, "Light Position", TW_TYPE_DIR3F, &lightPos, "label='Light Position'");
 
 	TwAddSeparator(tweakBar, "Utility", nullptr);
@@ -363,6 +365,7 @@ void loadShader(bool init) {
 	//Deferred
 	pointGbufferShader = Shader("./shader/PointGbuffer/pointGbuffer.vs.glsl", "./shader/PointGbuffer/pointGbuffer.fs.glsl");
 	pointDeferredShader = Shader("./shader/PointGbuffer/pointDeferred.vs.glsl", "./shader/PointGbuffer/pointDeferred.fs.glsl");
+	pointFuzzyShader = Shader("./shader/PointGbuffer/pointFuzzy.vs.glsl", "./shader/PointGbuffer/pointFuzzy.fs.glsl");
 
 	//FBO
 	quadScreenSizedShader = Shader("./shader/FboShader/quadScreenSized.vs.glsl", "./shader/FboShader/quadScreenSized.fs.glsl");
@@ -887,7 +890,10 @@ void standardSceneDeferred() {
 		//Clear
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
 		glClearColor(0.3f, 0.3f, 0.3f, 1);
+
+		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
 
 		/* ********************************************
 		modelMatrix
@@ -895,43 +901,21 @@ void standardSceneDeferred() {
 		glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
 
 		/* ********************************************
-		Draw Skybox (Disable Culling, else we loose skybox!)
-		**********************************************/
-		glDisable(GL_CULL_FACE);
-
-		//skyboxShader.enable();
-		//skyboxShader.uniform("projMatrix", projMatrix);
-		//skyboxShader.uniform("viewMatrix", cam.cameraRotation);
-		//skybox.Draw(skyboxShader);
-		//skyboxShader.disable();
-
-		/* ********************************************
-		Coordinate System
-		**********************************************/
-		basicColorShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		basicColorShader.uniform("modelMatrix", modelMatrix);
-		basicColorShader.uniform("viewMatrix", viewMatrix);
-		basicColorShader.uniform("projMatrix", projMatrix);
-		coordSysstem->draw();
-		basicColorShader.disable();
-
-		/* ********************************************
 		Octree
 		**********************************************/
-		if (drawOctreeBox) {
-			basicShader.enable();
-			basicShader.uniform("viewMatrix", viewMatrix);
-			basicShader.uniform("projMatrix", projMatrix);
-
-			for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
-				basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
-				basicShader.uniform("col", octree->colorLowestLeaf[i]);
-				octree->drawBox();
-			}
-
-			basicShader.disable();
-		}
+		//if (drawOctreeBox) {
+		//	basicShader.enable();
+		//	basicShader.uniform("viewMatrix", viewMatrix);
+		//	basicShader.uniform("projMatrix", projMatrix);
+		//
+		//	for (int i = 0; i < octree->modelMatrixLowestLeaf.size(); i++) {
+		//		basicShader.uniform("modelMatrix", octree->modelMatrixLowestLeaf[i]);
+		//		basicShader.uniform("col", octree->colorLowestLeaf[i]);
+		//		octree->drawBox();
+		//	}
+		//
+		//	basicShader.disable();
+		//}
 
 		/* ********************************************
 		Simple Splat
@@ -964,6 +948,8 @@ void standardSceneDeferred() {
 			pointGbufferShader.uniform("viewMatrix", viewMatrix);
 			pointGbufferShader.uniform("projMatrix", projMatrix);
 			pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+
+			pointGbufferShader.uniform("depthEpsilonOffset", depthEpsilonOffset);
 
 			pointGbufferShader.uniform("nearPlane", 1.0f);
 			pointGbufferShader.uniform("farPlane", 500.0f);
@@ -1025,9 +1011,19 @@ void standardSceneDeferred() {
 			}
 		}
 		basicShader.disable();
+
+		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); //disable color rendering
 	}
 	fbo->Unbind();
 
+
+	fbo->Bind();
+	{
+		glDepthMask(GL_FALSE);
+
+		glDepthMask(GL_TRUE);
+	}
+	fbo->Unbind();
 
 	/* #### FBO End #### */
 	//GaussFilter
@@ -1105,6 +1101,49 @@ void standardSceneDeferred() {
 			fbo->Unbind();
 		}
 	}
+
+	//Deferred Shading
+	/*
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
+	glClearColor(0.3f, 0.3f, 0.3f, 1);
+	pointDeferredShader.enable();
+	glActiveTexture(GL_TEXTURE0);
+	fbo->bindTexture(0, 0);
+	pointDeferredShader.uniform("texColor", 0);
+	glActiveTexture(GL_TEXTURE1);
+	fbo->bindTexture(1, 1);
+	pointDeferredShader.uniform("texNormal", 1);
+	glActiveTexture(GL_TEXTURE2);
+	fbo->bindTexture(2, 2);
+	pointDeferredShader.uniform("texPosition", 2);
+	glActiveTexture(GL_TEXTURE3);
+	fbo->bindDepth(3);
+	pointDeferredShader.uniform("texDepth", 3);
+	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
+	pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
+	quad->draw();
+	pointDeferredShader.disable();
+	*/
+
+	/*
+	fbo->Bind();
+	//Activate Stencil
+	glClear(GL_STENCIL_BUFFER_BIT);
+	glEnable(GL_STENCIL_TEST);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
+	glDepthMask(GL_FALSE);
+	glDepthFunc(GL_LESS); //disable depth buffer writes
+	glStencilFunc(GL_ALWAYS, 1, 0xFF); //always pass stencil test //if depth test fails, replace depth value with ref (=1)
+	glStencilOp(GL_KEEP, GL_REPLACE, GL_KEEP);
+	//Deactivate Stencil
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_TRUE);
+	glStencilFunc(GL_EQUAL, 1, 0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	fbo->Unbind();
+	*/
 
 	//Render to screen
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
