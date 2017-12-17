@@ -2,7 +2,7 @@
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outNormal;
 layout(location = 2) out vec4 outPos;
-layout(location = 3) out vec4 outDepth;
+//layout(location = 3) out vec4 outDepth;
 
 in vec2 vTexCoord;
 
@@ -73,8 +73,10 @@ void main() {
 	outPos = vec4( filterTexture(texPosition), 1.0);
 
 	//Depth
-    outDepth = vec4(vec3(texture2D(texDepth, vTexCoord).r), 1.0);
-	outDepth = vec4( filterTexture(texDepth), 1.0);
-
+    //outDepth = vec4(vec3(texture2D(texDepth, vTexCoord).r), 1.0);
+	//outDepth = vec4( filterTexture(texDepth), 1.0);
+	
+	gl_FragDepth = texture2D(texDepth, vTexCoord).r;
+	//gl_FragDepth = filterTexture(texDepth).r;
 
 }

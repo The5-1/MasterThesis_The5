@@ -36,16 +36,20 @@ void main() {
 	
 	//Size
 	gl_PointSize = glPointSize * (1.0 - gl_Position.z/gl_Position.w);
+	//gl_PointSize = glPointSize;
 
+	
 
 	/* ******************************************************************
 	Backface-Culling (gl_points dont have an implemented backface-cull)
 	****************************************************************** */
+	
 	#ifdef BACKFACE_CULLING
 	vec3 viewDirection = viewPoint - vPosition;
 	if(dot(viewDirection, vNormal) < 0 ){
 		gl_Position.w = 0.0;
 	}
 	#endif
+	
 }
 
