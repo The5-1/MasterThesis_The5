@@ -180,17 +180,23 @@ public:
 
 	void Bind() {
 		//glBindTexture(GL_TEXTURE_2D, 0); //Just to make sure the texture is not bound
-		gl_check_error("pre bind");
+		//gl_check_error("pre bind");
+
 		glBindFramebuffer(GL_FRAMEBUFFER, id);
-		gl_check_error("in bind");
+
+		//gl_check_error("in bind");
+
 		if (depthbuffer == 0)
 			glBindRenderbuffer(GL_RENDERBUFFER, alterante_depthbuffer_id);
-		gl_check_error("in bind");
+
+		//gl_check_error("in bind");
+
 		if (next_att != 0)
 			glDrawBuffers(next_att, &attachment_id[0]); //in which buffers of the fbo do we draw
 		else
 			glDrawBuffer(GL_NONE);
-		gl_check_error("post bind");
+
+		//gl_check_error("post bind");
 
 		//glViewport(0, 0, FBOwidth, FBOheight) //We should change the resoultion to the resolution of our FBO
 	}

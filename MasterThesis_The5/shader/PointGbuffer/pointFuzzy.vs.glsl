@@ -17,7 +17,7 @@
 
 #version 330
 
-#define VISIBILITY_PASS    1
+#define VISIBILITY_PASS    0
 #define SMOOTH             1
 #define EWA_FILTER         1
 
@@ -81,6 +81,8 @@ out block
     #endif
 }
 Out;
+
+out vec4 viewNormal;
 
 #if !VISIBILITY_PASS
     vec3 lighting(vec3 normal_eye, vec3 v_eye, vec3 color, float shininess)
@@ -347,6 +349,11 @@ pointsprite(in vec3 c, in vec3 u, in vec3 v,
 
 void main()
 {
+	//Normals
+	mat4 normalMatrix = transpose(inverse( modelview_matrix ));
+	viewNormal =  normalMatrix * vec4(p, 0.0);
+
+	//Default code
 	vec4 rgba = vec4(rgb, 1.0);
 	vec3 tangentHelper = vec3(0.0, 1.0, 0.0);
 

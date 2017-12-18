@@ -1,4 +1,3 @@
-
 // This file is part of Surface Splatting.
 //
 // Copyright (C) 2010, 2015 by Sebastian Lipponer.
@@ -18,7 +17,7 @@
 
 #version 330
 
-#define VISIBILITY_PASS  1
+#define VISIBILITY_PASS  0
 #define SMOOTH           1
 #define EWA_FILTER       1
 
@@ -54,6 +53,8 @@ in block
 }
 In;
 
+out vec4 viewNormal;
+
 #define FRAG_COLOR 0
 layout(location = FRAG_COLOR) out vec4 frag_color;
 
@@ -63,6 +64,8 @@ layout(location = FRAG_COLOR) out vec4 frag_color;
         layout(location = FRAG_NORMAL) out vec4 frag_normal;
     #endif
 #endif
+
+layout(location = 2) out vec4 frag_gauss;
 
 void main()
 {
@@ -83,6 +86,18 @@ void main()
         discard;
     }
 	*/
+
+	//Selfmade: Discard
+	vec2 circCoord = 2.0 * gl_PointCoord - vec2(1.0, 1.0); //Maps to [-1, 1]
+	float delta_z = (+ ((viewNormal.x ) / (viewNormal.z )) * circCoord.x - ((viewNormal.y ) / (viewNormal.z )) * circCoord.y);
+
+	float maxRadius = 1.0;
+	float currentRadius = length( vec3(circCoord.x, circCoord.y, delta_z) );
+
+	if(currentRadius > maxRadius)
+	{
+		discard;
+	}
 
     float w3d = length(u);
     float zval = q.z;
@@ -116,13 +131,20 @@ void main()
             float alpha = 1.0;
         #endif
 
-        //frag_color = vec4(In.color, alpha);
-		frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+		
 
+        frag_color = vec4(In.color, alpha);
+		//frag_color = vec4(1.0, 0.0, 0.0, 1.0);
+
+		frag_normal = vec4(vec3(0.5), alpha);
         #if SMOOTH
             frag_normal = vec4(In.n_eye, alpha);
         #endif
     #endif
+
+	float gauss = texture(filter_kernel, dist).r;
+	frag_gauss = vec4(vec3(gauss), 1.0);
+	//frag_gauss = vec4(vec3(0.0, 1.0, 0.0), 1.0);
 
     #if VISIBILITY_PASS
         zval -= epsilon;
