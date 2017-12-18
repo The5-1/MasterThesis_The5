@@ -16,6 +16,7 @@ uniform vec3 lightVecV;
 //Lighting
 //#define PHONG 0
 #define BLENDING 0
+#define DEPTH_DIFFERENCE 0
 
 void main(){
     vec4 dif = texture2D(texColor, tc);
@@ -46,5 +47,4 @@ void main(){
 		gl_FragDepth = outDepth.r;
 		*/
 	#endif
-
 }

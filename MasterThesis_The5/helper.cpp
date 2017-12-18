@@ -225,7 +225,7 @@ void reshape(int w, int h) {
 	static bool initialization= true;
 
 	if (initialization) {
-		glViewport(0,0,(GLsizei)w, (GLsizei)h);
+		glViewport(0, 0,(GLsizei)w, (GLsizei)h);
 		projMatrix = glm::perspective(70.0f, (GLfloat)w / (GLfloat)h, 1.0f, 100.0f);
 		initialization = false;
 	}

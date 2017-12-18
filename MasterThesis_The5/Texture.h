@@ -52,4 +52,50 @@ public:
 
 };
 
+class FilterKernel {
+public:
+	int w;
+	GLuint index;
+
+public:
+	FilterKernel() {
+		const float sigma2 = 0.316228f; // Sqrt(0.1).
+
+		GLfloat yi[256];
+		for (unsigned int i = 0; i < 256; ++i)
+		{
+			float x = static_cast<GLfloat>(i) / 255.0f;
+			float const w = x * x / (2.0f * sigma2);
+			yi[i] = std::exp(-w);
+
+			//std::cout << yi[i] << " ";
+		}
+
+		glGenTextures(1, &index);
+		glBindTexture(GL_TEXTURE_1D, index);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		//void glTexImage1D(GLenum target,GLint level,GLint internalFormat,GLsizei width,GLint border,GLenum format,GLenum type,const GLvoid * data);
+		this->w = 256;
+		glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, w, 0, GL_RED, GL_FLOAT, yi);
+	}
+
+
+
+	void Bind() {
+		glBindTexture(GL_TEXTURE_2D, index);
+	}
+
+	int Unbind() {
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return index;
+	}
+
+	GLuint Index() const {
+		return index;
+	}
+
+};
+
 #endif

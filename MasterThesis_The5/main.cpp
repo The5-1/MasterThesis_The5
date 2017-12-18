@@ -36,7 +36,7 @@ long timeCounter, timebase;
 char timeString[50];
 
 //Resolution (has to be changed in helper.h too)
-glm::vec2 resolution = glm::vec2(1024, 768);
+glm::vec2 resolution = glm::vec2(1024.0f, 768.0f);
 
 //Externals
 //cameraSystem cam(1.0f, 1.0f, glm::vec3(20.95f, 20.95f, -0.6f));
@@ -59,6 +59,9 @@ char* negy = "C:/Dev/Assets/SkyboxTextures/Yokohama2/negy.jpg";
 char* negx = "C:/Dev/Assets/SkyboxTextures/Yokohama2/negx.jpg";
 char* posx = "C:/Dev/Assets/SkyboxTextures/Yokohama2/posx.jpg";
 
+//Textures
+FilterKernel* filter = 0;
+
 //Shaders
 Shader basicShader;
 Shader modelLoaderShader;
@@ -76,7 +79,7 @@ Shader pointFuzzyShader;
 
 //Filter
 Shader gaussFilterShader;
-
+Shader oneDimKernelShader;
 
 //Skybox
 Shader skyboxShader;
@@ -107,7 +110,7 @@ glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
 float glPointSizeFloat = 80.0f;
 float depthEpsilonOffset = 0.0f;
 typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
-typedef enum { SIMPLE, DEBUG, DEFERRED } RENDER_TYPE; RENDER_TYPE m_currenRender = DEFERRED;
+typedef enum { SIMPLE, DEBUG, DEFERRED, KERNEL} RENDER_TYPE; RENDER_TYPE m_currenRender = DEFERRED;
 
 /* *********************************************************************************************************
 Helper Function
@@ -192,8 +195,8 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "Passes", TW_TYPE_INT16, &filterPasses, " label='Passes' min=0 step=1 max=100");
 
 	TwAddSeparator(tweakBar, "Debug Options", nullptr);
-	TwEnumVal render[] = { {SIMPLE, "SIMPLE"}, {DEBUG, "DEBUG"}, {DEFERRED, "DEFERRED"} };
-	TwType renderTwType = TwDefineEnum("renderType", render, 3);
+	TwEnumVal render[] = { {SIMPLE, "SIMPLE"}, {DEBUG, "DEBUG"}, {DEFERRED, "DEFERRED"}, { KERNEL, "KERNEL"} };
+	TwType renderTwType = TwDefineEnum("renderType", render, 4);
 	TwAddVarRW(tweakBar, "render", renderTwType, &m_currenRender, NULL);
 }
 
@@ -312,6 +315,11 @@ void init() {
 	quad->upload();
 
 	/*****************************************************************
+	Filter
+	*****************************************************************/
+	filter = new FilterKernel();
+
+	/*****************************************************************
 	obj-Models
 	*****************************************************************/
 	//teaPot = new simpleModel("C:/Dev/Assets/Teapot/teapot.obj", true);
@@ -348,19 +356,23 @@ void init() {
 	***TeaPot
 	**************/
 	//loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/Kompie8/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/bigTeapotVNA_100.big");
-	//octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
+	loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/The5/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/bigTeapotVNA_100.big");
+	//for (int i = 0; i < bigNormals.size(); i++) {
+	//	bigNormals[i] = glm::vec3(0.0f);
+	//}
+	octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
 
 	/*************
 	***Sphere
 	**************/
-	sphere = new solidSphere(1.0f, 30, 30);
-	std::vector<glm::vec3> sphereNormals;
-	std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
-	for (int i = 0; i < sphere->vertices.size(); i++) {
-		sphereNormals.push_back(sphere->vertices[i]);
-		sphere->vertices[i] = 3.0f * sphere->vertices[i];
-	}
-	octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
+	//sphere = new solidSphere(1.0f, 30, 30);
+	//std::vector<glm::vec3> sphereNormals;
+	//std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
+	//for (int i = 0; i < sphere->vertices.size(); i++) {
+	//	sphereNormals.push_back(sphere->vertices[i]);
+	//	sphere->vertices[i] = 3.0f * sphere->vertices[i];
+	//}
+	//octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
 
 
 
@@ -422,6 +434,9 @@ void loadShader(bool init) {
 	standardMiniColorFboShader = Shader("./shader/FboShader/standardMiniColorFBO.vs.glsl", "./shader/FboShader/standardMiniColorFBO.fs.glsl");
 	standardMiniDepthFboShader = Shader("./shader/FboShader/standardMiniDepthFBO.vs.glsl", "./shader/FboShader/standardMiniDepthFBO.fs.glsl");
 	gaussFilterShader = Shader("./shader/Filter/gaussFilter.vs.glsl", "./shader/Filter/gaussFilter.fs.glsl");
+
+	//Debug-Shaders
+	oneDimKernelShader = Shader("./shader/Filter/oneDimKernel.vs.glsl", "./shader/Filter/oneDimKernel.fs.glsl");
 }
 
 /* *********************************************************************************************************
@@ -630,7 +645,6 @@ void standardScene() {
 
 	//basicShader.disable();
 }
-
 
 void standardSceneFBO() {
 	/* #### FBO ####*/
@@ -933,234 +947,310 @@ void standardSceneFBO() {
 	standardMiniColorFboShader.disable();
 }
 
+
 void standardSceneDeferred() {
 	/* ********************************************
 	modelMatrix
 	**********************************************/
 	glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
 
-	/* #### FBO ####*/
-	fbo->Bind();
-	{
-		//Clear
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glEnable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		glClearColor(0.0f, 0.0f, 0.0f, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
+	glEnable(GL_POINT_SPRITE);
+	glEnable(GL_PROGRAM_POINT_SIZE);
 
-		/* ********************************************
-		Simple Splat
-		**********************************************/
-		//glEnable(GL_BLEND);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	pointFuzzyShader.enable();
 
-		glEnable(GL_POINT_SPRITE);
-		glEnable(GL_PROGRAM_POINT_SIZE);	
+	pointFuzzyShader.uniform("modelview_matrix", viewMatrix * modelMatrix);
+	pointFuzzyShader.uniform("projection_matrix", projMatrix);
+	pointFuzzyShader.uniform("projection_matrix_inv", glm::inverse(projMatrix));
 
-		pointGbufferShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		pointGbufferShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferShader.uniform("projMatrix", projMatrix);
-		pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
-
-		pointGbufferShader.uniform("depthEpsilonOffset", depthEpsilonOffset);
-
-		pointGbufferShader.uniform("nearPlane", 1.0f);
-		pointGbufferShader.uniform("farPlane", 500.0f);
-		pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
-
-		octree->drawPointCloud();
-		pointGbufferShader.disable();
-		glDisable(GL_POINT_SPRITE);
-		glDisable(GL_PROGRAM_POINT_SIZE);
-			
-
-		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); //disable color rendering
-	}
-	fbo->Unbind();
-
-
-	fbo->Bind();
-	{
-		glDepthMask(GL_FALSE);
-
-		glEnable(GL_POINT_SPRITE);
-		glEnable(GL_PROGRAM_POINT_SIZE);
-
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
-
-		pointGbufferShader.enable();
-		modelMatrix = glm::mat4(1.0f);
-		pointGbufferShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferShader.uniform("projMatrix", projMatrix);
-		pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
-
-		pointGbufferShader.uniform("depthEpsilonOffset", 0.0f);
-
-		pointGbufferShader.uniform("nearPlane", 1.0f);
-		pointGbufferShader.uniform("farPlane", 500.0f);
-		pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
-
-		octree->drawPointCloud();
-		pointGbufferShader.disable();
-		glDisable(GL_POINT_SPRITE);
-		glDisable(GL_PROGRAM_POINT_SIZE);
-
-		glDepthMask(GL_TRUE);
-
-		glDisable(GL_BLEND);
-	}
-	fbo->Unbind();
-
-	fbo2->Bind();
-	{
-		glClear(GL_COLOR_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-		glClearColor(0.3f, 0.3f, 0.3f, 1);
-		pointDeferredShader.enable();
-		fbo->bindTexture(0, 0);
-		pointDeferredShader.uniform("texColor", 0);
-		fbo->bindTexture(1, 1);
-		pointDeferredShader.uniform("texNormal", 1);
-		fbo->bindTexture(2, 2);
-		pointDeferredShader.uniform("texPosition", 2);
-		fbo->bindDepth(3);
-		pointDeferredShader.uniform("texDepth", 3);
-		glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
-		pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
-		quad->draw();
-		pointDeferredShader.disable();
-	}
-	fbo2->Unbind();
-
-	drawFBO(fbo2);
-
-	/* #### FBO End #### */
-	//GaussFilter
-	if (false) {
-		for (int i = 0; i < filterPasses; i++) {
-			fbo2->Bind();
-			{
-				glClear(GL_COLOR_BUFFER_BIT);
-				glDisable(GL_DEPTH_TEST);
-				glClearColor(0.3f, 0.3f, 0.3f, 1);
-				gaussFilterShader.enable();
-
-				glActiveTexture(GL_TEXTURE0);
-				fbo->bindTexture(0);
-				gaussFilterShader.uniform("texColor", 0);
-				glActiveTexture(GL_TEXTURE1);
-				fbo->bindTexture(1, 1);
-				gaussFilterShader.uniform("texNormal", 1);
-				glActiveTexture(GL_TEXTURE2);
-				fbo->bindTexture(2, 2);
-				gaussFilterShader.uniform("texPosition", 2);
-				glActiveTexture(GL_TEXTURE3);
-				fbo->bindDepth(3);
-				gaussFilterShader.uniform("texDepth", 3);
-
-				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
-				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
-				gaussFilterShader.uniform("radius", 1.0f);
-				gaussFilterShader.uniform("dir", glm::vec2(1.0f, 0.0f));
-				quad->draw();
-
-				fbo->unbindTexture(0);
-				fbo->unbindTexture(1);
-				fbo->unbindTexture(2);
-				fbo->unbindDepth();
-				glActiveTexture(GL_TEXTURE0);
-
-				gaussFilterShader.disable();
-			}
-			fbo2->Unbind();
-
-			fbo->Bind();
-			{
-				glClear(GL_COLOR_BUFFER_BIT);
-				glDisable(GL_DEPTH_TEST);
-				glClearColor(0.3f, 0.3f, 0.3f, 1);
-				gaussFilterShader.enable();
-
-				glActiveTexture(GL_TEXTURE0);
-				fbo2->bindTexture(0, 0);
-				gaussFilterShader.uniform("texColor", 0);
-				glActiveTexture(GL_TEXTURE1);
-				fbo2->bindTexture(1, 1);
-				gaussFilterShader.uniform("texNormal", 1);
-				glActiveTexture(GL_TEXTURE2);
-				fbo2->bindTexture(2, 2);
-				gaussFilterShader.uniform("texPosition", 2);
-				glActiveTexture(GL_TEXTURE3);
-				fbo2->bindDepth(3);
-				gaussFilterShader.uniform("texDepth", 3);
-
-				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
-				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
-				gaussFilterShader.uniform("radius", 1.0f);
-				gaussFilterShader.uniform("dir", glm::vec2(0.0f, 1.0f));
-				quad->draw();
-
-				fbo2->unbindTexture(0);
-				fbo2->unbindTexture(1);
-				fbo2->unbindTexture(2);
-				fbo2->unbindDepth();
-				glActiveTexture(GL_TEXTURE0);
-				gaussFilterShader.disable();
-			}
-			fbo->Unbind();
-		}
-	}
-
-	//Deferred Shading
-	/*glClear(GL_COLOR_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-	glClearColor(0.3f, 0.3f, 0.3f, 1);
-	pointDeferredShader.enable();
+	//Kernel
 	glActiveTexture(GL_TEXTURE0);
-	fbo->bindTexture(0, 0);
-	pointDeferredShader.uniform("texColor", 0);
-	glActiveTexture(GL_TEXTURE1);
-	fbo->bindTexture(1, 1);
-	pointDeferredShader.uniform("texNormal", 1);
-	glActiveTexture(GL_TEXTURE2);
-	fbo->bindTexture(2, 2);
-	pointDeferredShader.uniform("texPosition", 2);
-	glActiveTexture(GL_TEXTURE3);
-	fbo->bindDepth(3);
-	pointDeferredShader.uniform("texDepth", 3);
-	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
-	pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
-	quad->draw();
-	pointDeferredShader.disable();*/
+	filter->Bind();
+	pointFuzzyShader.uniform("filter_kernel", 0);
 
-	/*
-	fbo->Bind();
-	//Activate Stencil
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glEnable(GL_STENCIL_TEST);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
-	glDepthMask(GL_FALSE);
-	glDepthFunc(GL_LESS); //disable depth buffer writes
-	glStencilFunc(GL_ALWAYS, 1, 0xFF); //always pass stencil test //if depth test fails, replace depth value with ref (=1)
-	glStencilOp(GL_KEEP, GL_REPLACE, GL_KEEP);
-	//Deactivate Stencil
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
-	glStencilFunc(GL_EQUAL, 1, 0xFF);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	fbo->Unbind();
+	//Placeholder
+	pointFuzzyShader.uniform("viewport", glm::vec4(0.0f, 0.0f, resolution.x, resolution.y));
+	/*splat_renderer.cpp (449):
+	Vector4f frustum_plane[6];
+
+	Matrix4f const& projection_matrix = m_camera.get_projection_matrix();
+	for (unsigned int i(0); i < 6; ++i)
+	{
+		frustum_plane[i] = projection_matrix.row(3) + (-1.0f + 2.0f
+			* static_cast<float>(i % 2)) * projection_matrix.row(i / 2);
+	}
+
+	for (unsigned int i(0); i < 6; ++i)
+	{
+		frustum_plane[i] = (1.0f / frustum_plane[i].block<3, 1>(
+			0, 0).norm()) * frustum_plane[i];
+	}
 	*/
+	glm::vec4 frustum_plane[6];
+	pointFuzzyShader.uniform("frustum_plane", frustum_plane);
+	pointFuzzyShader.uniform("material_color", glm::vec3(1.0, 0.0, 0.0));
+	pointFuzzyShader.uniform("material_shininess", 8.0f);
+	pointFuzzyShader.uniform("radius_scale", 1.0f);
+	pointFuzzyShader.uniform("ewa_radius", 1.0f);
+	pointFuzzyShader.uniform("epsilon", 5.0f * 1e-3f);
 
-	//Render to screen
+	octree->drawPointCloud();
+
+	pointFuzzyShader.disable();
+	filter->Unbind();
+
+	glDisable(GL_POINT_SPRITE);
+	glDisable(GL_PROGRAM_POINT_SIZE);
+}
+//void standardSceneDeferred() {
+//	/* ********************************************
+//	modelMatrix
+//	**********************************************/
+//	glm::mat4 modelMatrix = glm::scale(glm::vec3(1.0f));
+//
+//	/* #### FBO ####*/
+//	fbo->Bind();
+//	{
+//		//Clear
+//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//		glEnable(GL_DEPTH_TEST);
+//		glDisable(GL_CULL_FACE);
+//		glClearColor(0.0f, 0.0f, 0.0f, 1);
+//
+//		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
+//
+//		/* ********************************************
+//		Simple Splat
+//		**********************************************/
+//		//glEnable(GL_BLEND);
+//		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//
+//		glEnable(GL_POINT_SPRITE);
+//		glEnable(GL_PROGRAM_POINT_SIZE);	
+//
+//		pointGbufferShader.enable();
+//		modelMatrix = glm::scale(glm::vec3(1.0f));
+//		pointGbufferShader.uniform("modelMatrix", modelMatrix);
+//		pointGbufferShader.uniform("viewMatrix", viewMatrix);
+//		pointGbufferShader.uniform("projMatrix", projMatrix);
+//		pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+//
+//		pointGbufferShader.uniform("depthEpsilonOffset", depthEpsilonOffset);
+//
+//		pointGbufferShader.uniform("nearPlane", 1.0f);
+//		pointGbufferShader.uniform("farPlane", 500.0f);
+//		pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
+//		pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
+//
+//		octree->drawPointCloud();
+//		pointGbufferShader.disable();
+//		glDisable(GL_POINT_SPRITE);
+//		glDisable(GL_PROGRAM_POINT_SIZE);
+//			
+//
+//		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); //disable color rendering
+//	}
+//	fbo->Unbind();
+//
+//
+//	fbo->Bind();
+//	{
+//		glDepthMask(GL_FALSE);
+//
+//		glEnable(GL_POINT_SPRITE);
+//		glEnable(GL_PROGRAM_POINT_SIZE);
+//
+//		glEnable(GL_BLEND);
+//		glBlendFunc(GL_ONE, GL_ONE);
+//
+//		pointGbufferShader.enable();
+//		modelMatrix = glm::mat4(1.0f);
+//		pointGbufferShader.uniform("modelMatrix", modelMatrix);
+//		pointGbufferShader.uniform("viewMatrix", viewMatrix);
+//		pointGbufferShader.uniform("projMatrix", projMatrix);
+//		pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+//
+//		pointGbufferShader.uniform("depthEpsilonOffset", 0.0f);
+//
+//		pointGbufferShader.uniform("nearPlane", 1.0f);
+//		pointGbufferShader.uniform("farPlane", 500.0f);
+//		pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
+//		pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
+//
+//		octree->drawPointCloud();
+//		pointGbufferShader.disable();
+//		glDisable(GL_POINT_SPRITE);
+//		glDisable(GL_PROGRAM_POINT_SIZE);
+//
+//		glDepthMask(GL_TRUE);
+//
+//		glDisable(GL_BLEND);
+//	}
+//	fbo->Unbind();
+//
+//	fbo2->Bind();
+//	{
+//		glClear(GL_COLOR_BUFFER_BIT);
+//		glDisable(GL_DEPTH_TEST);
+//		glClearColor(0.3f, 0.3f, 0.3f, 1);
+//		pointDeferredShader.enable();
+//		fbo->bindTexture(0, 0);
+//		pointDeferredShader.uniform("texColor", 0);
+//		fbo->bindTexture(1, 1);
+//		pointDeferredShader.uniform("texNormal", 1);
+//		fbo->bindTexture(2, 2);
+//		pointDeferredShader.uniform("texPosition", 2);
+//		fbo->bindDepth(3);
+//		pointDeferredShader.uniform("texDepth", 3);
+//		glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
+//		pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
+//		quad->draw();
+//		pointDeferredShader.disable();
+//	}
+//	fbo2->Unbind();
+//
+//	drawFBO(fbo);
+//
+//	/* #### FBO End #### */
+//	//GaussFilter
+//	if (false) {
+//		for (int i = 0; i < filterPasses; i++) {
+//			fbo2->Bind();
+//			{
+//				glClear(GL_COLOR_BUFFER_BIT);
+//				glDisable(GL_DEPTH_TEST);
+//				glClearColor(0.3f, 0.3f, 0.3f, 1);
+//				gaussFilterShader.enable();
+//
+//				glActiveTexture(GL_TEXTURE0);
+//				fbo->bindTexture(0);
+//				gaussFilterShader.uniform("texColor", 0);
+//				glActiveTexture(GL_TEXTURE1);
+//				fbo->bindTexture(1, 1);
+//				gaussFilterShader.uniform("texNormal", 1);
+//				glActiveTexture(GL_TEXTURE2);
+//				fbo->bindTexture(2, 2);
+//				gaussFilterShader.uniform("texPosition", 2);
+//				glActiveTexture(GL_TEXTURE3);
+//				fbo->bindDepth(3);
+//				gaussFilterShader.uniform("texDepth", 3);
+//
+//				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+//				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+//				gaussFilterShader.uniform("radius", 1.0f);
+//				gaussFilterShader.uniform("dir", glm::vec2(1.0f, 0.0f));
+//				quad->draw();
+//
+//				fbo->unbindTexture(0);
+//				fbo->unbindTexture(1);
+//				fbo->unbindTexture(2);
+//				fbo->unbindDepth();
+//				glActiveTexture(GL_TEXTURE0);
+//
+//				gaussFilterShader.disable();
+//			}
+//			fbo2->Unbind();
+//
+//			fbo->Bind();
+//			{
+//				glClear(GL_COLOR_BUFFER_BIT);
+//				glDisable(GL_DEPTH_TEST);
+//				glClearColor(0.3f, 0.3f, 0.3f, 1);
+//				gaussFilterShader.enable();
+//
+//				glActiveTexture(GL_TEXTURE0);
+//				fbo2->bindTexture(0, 0);
+//				gaussFilterShader.uniform("texColor", 0);
+//				glActiveTexture(GL_TEXTURE1);
+//				fbo2->bindTexture(1, 1);
+//				gaussFilterShader.uniform("texNormal", 1);
+//				glActiveTexture(GL_TEXTURE2);
+//				fbo2->bindTexture(2, 2);
+//				gaussFilterShader.uniform("texPosition", 2);
+//				glActiveTexture(GL_TEXTURE3);
+//				fbo2->bindDepth(3);
+//				gaussFilterShader.uniform("texDepth", 3);
+//
+//				gaussFilterShader.uniform("resolutionWIDTH", (float)resolution.x);
+//				gaussFilterShader.uniform("resolutionHEIGHT", (float)resolution.y);
+//				gaussFilterShader.uniform("radius", 1.0f);
+//				gaussFilterShader.uniform("dir", glm::vec2(0.0f, 1.0f));
+//				quad->draw();
+//
+//				fbo2->unbindTexture(0);
+//				fbo2->unbindTexture(1);
+//				fbo2->unbindTexture(2);
+//				fbo2->unbindDepth();
+//				glActiveTexture(GL_TEXTURE0);
+//				gaussFilterShader.disable();
+//			}
+//			fbo->Unbind();
+//		}
+//	}
+//
+//	//Deferred Shading
+//	/*
+//	glClear(GL_COLOR_BUFFER_BIT);
+//	glDisable(GL_DEPTH_TEST);
+//	glClearColor(0.3f, 0.3f, 0.3f, 1);
+//	pointDeferredShader.enable();
+//	glActiveTexture(GL_TEXTURE0);
+//	fbo->bindTexture(0, 0);
+//	pointDeferredShader.uniform("texColor", 0);
+//	glActiveTexture(GL_TEXTURE1);
+//	fbo->bindTexture(1, 1);
+//	pointDeferredShader.uniform("texNormal", 1);
+//	glActiveTexture(GL_TEXTURE2);
+//	fbo->bindTexture(2, 2);
+//	pointDeferredShader.uniform("texPosition", 2);
+//	glActiveTexture(GL_TEXTURE3);
+//	fbo->bindDepth(3);
+//	pointDeferredShader.uniform("texDepth", 3);
+//	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
+//	pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
+//	quad->draw();
+//	pointDeferredShader.disable();
+//	*/
+//
+//	/*
+//	fbo->Bind();
+//	//Activate Stencil
+//	glClear(GL_STENCIL_BUFFER_BIT);
+//	glEnable(GL_STENCIL_TEST);
+//	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
+//	glDepthMask(GL_FALSE);
+//	glDepthFunc(GL_LESS); //disable depth buffer writes
+//	glStencilFunc(GL_ALWAYS, 1, 0xFF); //always pass stencil test //if depth test fails, replace depth value with ref (=1)
+//	glStencilOp(GL_KEEP, GL_REPLACE, GL_KEEP);
+//	//Deactivate Stencil
+//	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+//	glDepthFunc(GL_LESS);
+//	glDepthMask(GL_TRUE);
+//	glStencilFunc(GL_EQUAL, 1, 0xFF);
+//	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+//	fbo->Unbind();
+//	*/
+//}
+
+
+void kernelScene(){
+	//Debug Render Filter
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glClearColor(0.0f, 0.0f, 0.0f, 1);
+	oneDimKernelShader.enable();
+	glActiveTexture(GL_TEXTURE0);
+	filter->Bind();
+	oneDimKernelShader.uniform("filter_kernel", 0);
+	quad->draw();
+	filter->Unbind();
+	oneDimKernelShader.disable();
 }
 
 /* *********************************************************************************************************
@@ -1188,6 +1278,9 @@ void display() {
 		break;
 	case DEFERRED:
 		standardSceneDeferred();
+		break;
+	case KERNEL:
+		kernelScene();
 		break;
 	};
 

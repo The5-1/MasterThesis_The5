@@ -11,7 +11,6 @@ uniform mat4 projMatrix;
 uniform vec3 col;
 uniform vec3 viewPoint;
 
-
 uniform float glPointSize;
 
 out vec4 viewNormal;
@@ -43,13 +42,11 @@ void main() {
 	/* ******************************************************************
 	Backface-Culling (gl_points dont have an implemented backface-cull)
 	****************************************************************** */
-	
 	#ifdef BACKFACE_CULLING
 	vec3 viewDirection = viewPoint - vPosition;
 	if(dot(viewDirection, vNormal) < 0 ){
 		gl_Position.w = 0.0;
 	}
-	#endif
-	
+	#endif	
 }
 

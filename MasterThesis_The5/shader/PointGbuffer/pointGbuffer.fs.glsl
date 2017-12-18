@@ -15,8 +15,8 @@ in vec3 color;
 in vec4 positionFBO;
 
 //Render type (only 1 may be active!!)
-#define SIMPLE_POINT 0
-//#define AFFINE_PROJECTED 0
+//#define SIMPLE_POINT 0
+#define AFFINE_PROJECTED 0
 
 
 void main(){ 
@@ -52,7 +52,21 @@ void main(){
 		}
 
 		//Update depth
-		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w + depthEpsilonOffset;
+		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2)) * gl_FragCoord.w + depthEpsilonOffset;
+		// conversion into NDC [-1,1]
+		//float n = 1.0;
+		//float f = 500.0;
+		//float zndc =  gl_FragCoord.z * 2.0 - 1.0;
+		//float zeye = 2*f*n / (zndc*(f-n)-(f+n));
+		//Near: 1, far 500
+		//float newDepth = 1.0 / (- (0.5 * delta_z + 0.5) - (0.5 * gl_FragCoord.z + 0.5)) * 1.002 + 1.002; //Am besten, macht aber mathematisch keinen sinn
+		//float newDepth = 1.0 / (- (2.0 * delta_z - 1.0)- (2.0 * gl_FragCoord.z - 1.0)) * 1.002 + 1.002;
+		//float newDepth = 1.0 / (- delta_z - gl_FragCoord.z) * 1.002 + 1.002; //Am besten
+		//float newDepth = 1.0 / (+ delta_z - gl_FragCoord.z) * 1.002 + 1.002;
+		//Near: 5, far 500
+		//float newDepth = 1.0 / (+ delta_z - gl_FragCoord.z) * 5.0505 + 1.0101;
+		//float newDepth = 1.0 / (- delta_z - gl_FragCoord.z) * 5.0505 + 1.0101;
+
 		outDepth = vec4(vec3(newDepth), 1.0);
 		gl_FragDepth = newDepth; 
 	#endif
@@ -73,5 +87,6 @@ void main(){
 	float newDepth = gl_FragCoord.z + (pow(alpha, 2.0)) * gl_FragCoord.w + depthEpsilonOffset;
 	outDepth = vec4(vec3(newDepth), 1.0);
 	gl_FragDepth = newDepth; 
+
 	#endif
 }
