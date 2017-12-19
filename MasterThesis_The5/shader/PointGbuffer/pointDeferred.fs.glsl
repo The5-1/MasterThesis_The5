@@ -23,6 +23,7 @@ void main(){
 	vec4 nor = texture2D(texNormal, tc);
 	vec4 pos = texture2D(texPosition, tc);
 	vec4 depth = texture2D(texDepth, tc);
+	
 	//Lighting
 	#ifdef PHONG
 		//float lightint = 1.0 / (length(pos - lightVecV)*length(pos - lightVecV));

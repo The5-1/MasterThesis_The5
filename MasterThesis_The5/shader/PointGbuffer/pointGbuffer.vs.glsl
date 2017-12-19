@@ -34,7 +34,7 @@ void main() {
 	gl_Position = projMatrix * viewPosition;
 	
 	//Size
-	gl_PointSize = glPointSize * (1.0 - gl_Position.z/gl_Position.w);
+	gl_PointSize = glPointSize * (1.0 - gl_Position.z / gl_Position.w);
 	//gl_PointSize = glPointSize;
 
 	

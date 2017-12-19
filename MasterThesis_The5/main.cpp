@@ -1062,9 +1062,10 @@ void standardSceneDeferred() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glDisable(GL_CULL_FACE);
-		glClearColor(0.0f, 0.0f, 0.0f, 1);
+		glDisable(GL_BLEND);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-		//glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
 
 		/* ********************************************
 		Simple Splat
@@ -1095,15 +1096,15 @@ void standardSceneDeferred() {
 		glDisable(GL_PROGRAM_POINT_SIZE);
 			
 
-		//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); //disable color rendering
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); //disable color rendering
 	}
 	fbo->Unbind();
 
-
+	
 	fbo->Bind();
 	{
 		glDepthMask(GL_FALSE);
-
+		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);
 
@@ -1135,28 +1136,33 @@ void standardSceneDeferred() {
 	}
 	fbo->Unbind();
 
-	fbo2->Bind();
-	{
-		glClear(GL_COLOR_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-		glClearColor(0.3f, 0.3f, 0.3f, 1);
-		pointDeferredShader.enable();
-		fbo->bindTexture(0, 0);
-		pointDeferredShader.uniform("texColor", 0);
-		fbo->bindTexture(1, 1);
-		pointDeferredShader.uniform("texNormal", 1);
-		fbo->bindTexture(2, 2);
-		pointDeferredShader.uniform("texPosition", 2);
-		fbo->bindDepth(3);
-		pointDeferredShader.uniform("texDepth", 3);
-		glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
-		pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
-		quad->draw();
-		pointDeferredShader.disable();
-	}
-	fbo2->Unbind();
+	//drawFBO(fbo);
 
-	drawFBO(fbo);
+	//fbo2->Bind();
+	//{
+	//	glClear(GL_COLOR_BUFFER_BIT);
+	//	glDisable(GL_DEPTH_TEST);
+	//	glDisable(GL_BLEND);
+	//	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+	//	pointDeferredShader.enable();
+	//	fbo->bindTexture(0, 0);
+	//	pointDeferredShader.uniform("texColor", 0);
+	//	fbo->bindTexture(1, 1);
+	//	pointDeferredShader.uniform("texNormal", 1);
+	//	fbo->bindTexture(2, 2);
+	//	pointDeferredShader.uniform("texPosition", 2);
+	//	fbo->bindDepth(3);
+	//	pointDeferredShader.uniform("texDepth", 3);
+	//	glActiveTexture(GL_TEXTURE4);
+	//	filter->Bind();
+	//	pointDeferredShader.uniform("filter_kernel", 4);
+	//	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
+	//	pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
+	//	quad->draw();
+	//	pointDeferredShader.disable();
+	//}
+	//fbo2->Unbind();
+	//drawFBO(fbo2);
 
 	/* #### FBO End #### */
 	//GaussFilter
@@ -1235,11 +1241,10 @@ void standardSceneDeferred() {
 		}
 	}
 
-	//Deferred Shading
-	/*
+	//Deferred Shading (Use this to render directly to screen, else use the fbo to see debug)
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDisable(GL_DEPTH_TEST);
-	glClearColor(0.3f, 0.3f, 0.3f, 1);
+	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 	pointDeferredShader.enable();
 	glActiveTexture(GL_TEXTURE0);
 	fbo->bindTexture(0, 0);
@@ -1253,30 +1258,18 @@ void standardSceneDeferred() {
 	glActiveTexture(GL_TEXTURE3);
 	fbo->bindDepth(3);
 	pointDeferredShader.uniform("texDepth", 3);
+
+	glActiveTexture(GL_TEXTURE4);
+	filter->Bind();
+	pointDeferredShader.uniform("filter_kernel", 4);
+
 	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
 	pointDeferredShader.uniform("lightVecV", glm::vec3(lightPosView));
 	quad->draw();
 	pointDeferredShader.disable();
-	*/
 
-	/*
-	fbo->Bind();
-	//Activate Stencil
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glEnable(GL_STENCIL_TEST);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); //disable color rendering
-	glDepthMask(GL_FALSE);
-	glDepthFunc(GL_LESS); //disable depth buffer writes
-	glStencilFunc(GL_ALWAYS, 1, 0xFF); //always pass stencil test //if depth test fails, replace depth value with ref (=1)
-	glStencilOp(GL_KEEP, GL_REPLACE, GL_KEEP);
-	//Deactivate Stencil
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_TRUE);
-	glStencilFunc(GL_EQUAL, 1, 0xFF);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	fbo->Unbind();
-	*/
+
+	std::cout << "IMPORTANT: Because of the 2-pass-depthbuffer, we can only render if the distance epsilon is GREATER 0" << std::endl;
 }
 
 

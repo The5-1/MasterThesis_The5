@@ -71,9 +71,9 @@ public:
 	std::vector<glm::vec3> colorOctree = { glm::vec3(1.0f, 0.0f, 0.0f),		//Red		
 											glm::vec3(1.0f, 0.6f, 0.0f),	//Orange
 											glm::vec3(0.0f, 0.5f, 0.5f),	//Teal
-											glm::vec3(1.0f, 1.0f, 1.0f),	//White		
+											glm::vec3(0.5f, 0.5f, 0.65f),	//Blue-grey		
 											glm::vec3(0.0f, 1.0f, 0.0f),	//Green		
-											glm::vec3(0.0f, 0.0f, 0.0f),	//Black
+											glm::vec3(0.5f, 0.2f, 0.05f),	//Brown
 											glm::vec3(1.0f, 0.0f, 1.0f),	//Purple
 											glm::vec3(0.0f, 0.0f, 1.0f),	//Blue	
 										};

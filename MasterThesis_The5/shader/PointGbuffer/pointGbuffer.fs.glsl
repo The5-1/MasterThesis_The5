@@ -8,6 +8,7 @@ layout(location = 2) out vec4 outPos;
 layout(location = 3) out vec4 outDepth;
 
 uniform float depthEpsilonOffset;
+uniform sampler1D filter_kernel;
 
 in vec4 viewNormal;
 in vec4 viewPosition;
@@ -17,7 +18,7 @@ in vec4 positionFBO;
 //Render type (only 1 may be active!!)
 //#define SIMPLE_POINT 0
 #define AFFINE_PROJECTED 0
-
+#define GAUSS_ALPHA 0
 
 void main(){ 
 	/* ******************************************************************
@@ -48,7 +49,12 @@ void main(){
 			discard;
 		}
 		else{
-			outColor = vec4(color, 1.0);
+			float alpha = 1.0;
+			#ifdef GAUSS_ALPHA
+				alpha = texture(filter_kernel, currentRadius).r;
+			#endif
+			//outColor = vec4(vec3(texture(filter_kernel, currentRadius).r), alpha);
+			outColor = vec4(color, alpha);
 		}
 
 		//Update depth
