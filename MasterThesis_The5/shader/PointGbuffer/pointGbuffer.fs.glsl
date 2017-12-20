@@ -14,11 +14,16 @@ in vec4 viewNormal;
 in vec4 viewPosition;
 in vec3 color;
 in vec4 positionFBO;
+in float beta;
+
+in vec3 coordinateGridPos;
 
 //Render type (only 1 may be active!!)
 //#define SIMPLE_POINT 0
 #define AFFINE_PROJECTED 0
 #define GAUSS_ALPHA 0
+#define SHOW_COORDINATE_GRID 0
+//#define HARDWARE_ORIENTED_POINT_BASED_RENDERING_OF_COMPLEX_SCENES 0//page 6, http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.18.6803&rep=rep1&type=pdf
 
 void main(){ 
 	/* ******************************************************************
@@ -78,6 +83,38 @@ void main(){
 	#endif
 
 	/* ******************************************************************
+		page 6, http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.18.6803&rep=rep1&type=pdf
+	****************************************************************** */
+	#ifdef HARDWARE_ORIENTED_POINT_BASED_RENDERING_OF_COMPLEX_SCENES
+		//gl_PointCoord = 0.5 * gl_PointCoord;
+		vec2 circCoord = 2.0 * gl_PointCoord - vec2(1.0, 1.0); //Maps to [-1, 1]
+
+		float delta_z = (+ ((viewNormal.x ) / (viewNormal.z )) * circCoord.x - ((viewNormal.y ) / (viewNormal.z )) * circCoord.y);
+
+		float maxRadius = 1.0;
+		float currentRadius = length( vec3(circCoord.x, circCoord.y, delta_z) );
+
+		if(currentRadius > maxRadius)
+		{
+			discard;
+		}
+		else{
+			float alpha = 1.0;
+			#ifdef GAUSS_ALPHA
+				alpha = texture(filter_kernel, currentRadius).r;
+			#endif
+			outColor = vec4(vec3(beta), alpha);
+		}
+
+		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2)) * gl_FragCoord.w + depthEpsilonOffset;
+
+		outDepth = vec4(vec3(newDepth), 1.0);
+		gl_FragDepth = newDepth; 
+		
+ 	#endif
+
+
+	/* ******************************************************************
 		Simple Points
 	****************************************************************** */
 	#ifdef SIMPLE_POINT
@@ -94,5 +131,9 @@ void main(){
 	outDepth = vec4(vec3(newDepth), 1.0);
 	gl_FragDepth = newDepth; 
 
+	#endif
+
+	#if SHOW_COORDINATE_GRID == 1
+		outColor = vec4(vec3(fract(coordinateGridPos)*10.0-9-0),1.0);
 	#endif
 }

@@ -26,6 +26,9 @@
 #include "PC_Octree.h"
 #include "ObjToPcd.h"
 
+//#include <glm/gtc/matrix_transform.hpp>
+//glm::mat4 test = glm::frustum
+
 //Octree
 PC_Octree* octree = 0;
 
@@ -1083,12 +1086,15 @@ void standardSceneDeferred() {
 		pointGbufferShader.uniform("projMatrix", projMatrix);
 		pointGbufferShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
 
-		pointGbufferShader.uniform("depthEpsilonOffset", depthEpsilonOffset);
+		pointGbufferShader.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
 
 		pointGbufferShader.uniform("nearPlane", 1.0f);
 		pointGbufferShader.uniform("farPlane", 500.0f);
 		pointGbufferShader.uniform("viewPoint", glm::vec3(cam.position));
 		pointGbufferShader.uniform("glPointSize", glPointSizeFloat);
+
+		//std::cout << "cam pos: " << cam.position.x << " " << cam.position.y << " " << cam.position.z << " " << cam.position.w << std::endl;
+		pointGbufferShader.uniform("cameraPos", glm::vec3(cam.position));
 
 		octree->drawPointCloud();
 		pointGbufferShader.disable();
@@ -1268,8 +1274,7 @@ void standardSceneDeferred() {
 	quad->draw();
 	pointDeferredShader.disable();
 
-
-	std::cout << "IMPORTANT: Because of the 2-pass-depthbuffer, we can only render if the distance epsilon is GREATER 0" << std::endl;
+	//std::cout << "IMPORTANT: Because of the 2-pass-depthbuffer, we can only render if the distance epsilon is GREATER 0" << std::endl;
 }
 
 
