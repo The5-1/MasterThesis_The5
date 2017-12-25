@@ -79,6 +79,7 @@ void main(){
 		//float newDepth = 1.0 / (- delta_z - gl_FragCoord.z) * 5.0505 + 1.0101;
 
 		outDepth = vec4(vec3(newDepth), 1.0);
+		//outPos = vec4(vec3(newDepth), 1.0);
 		gl_FragDepth = newDepth; 
 	#endif
 

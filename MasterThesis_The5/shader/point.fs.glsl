@@ -22,7 +22,7 @@ in vec3 lightVecV;
 //#define POTREE 0
 
 //Lighting
-#define PHONG 0
+//#define PHONG 0
 
 void main(){ 
 	/* ******************************************************************
