@@ -84,6 +84,8 @@ public:
 	PC_Octree();
 	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad);
 
+	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad);
+
 	~PC_Octree();
 
 	void getAabbUniforms(glm::mat4& _modelMatrix);

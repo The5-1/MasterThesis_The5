@@ -366,16 +366,22 @@ void init() {
 	//octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
 
 	/*************
+	***NanoSuit
+	**************/
+	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
+
+	/*************
 	***Sphere
 	**************/
-	sphere = new solidSphere(1.0f, 30, 30);
-	std::vector<glm::vec3> sphereNormals;
-	std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
-	for (int i = 0; i < sphere->vertices.size(); i++) {
-		sphereNormals.push_back(sphere->vertices[i]);
-		sphere->vertices[i] = 3.0f * sphere->vertices[i];
-	}
-	octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
+	//sphere = new solidSphere(1.0f, 30, 30);
+	//std::vector<glm::vec3> sphereNormals;
+	//std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
+	//for (int i = 0; i < sphere->vertices.size(); i++) {
+	//	sphereNormals.push_back(sphere->vertices[i]);
+	//	sphere->vertices[i] = 3.0f * sphere->vertices[i];
+	//}
+	//octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
 
 
 

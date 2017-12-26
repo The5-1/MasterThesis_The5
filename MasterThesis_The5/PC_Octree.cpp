@@ -43,6 +43,42 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& 
 	this->uploadPointCloud(_vertices, _normals, _radius);
 }
 
+PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad)
+{
+	this->getAABB(minBoundingBox, maxBoundingBox, _vertices);
+
+	this->uploadGlBox();
+
+	this->root.endVertices = _vertices.size();
+	this->root.beginVertices = 0;
+
+	this->maxVerticesPerQuad = _maxVerticesPerQuad;
+
+	this->root.maxLeafBox = this->maxBoundingBox;
+	this->root.minLeafBox = this->minBoundingBox;
+
+	for (int i = 0; i < this->root.endVertices; i++) {
+		this->vertexIndexList.push_back(i);
+	}
+
+
+	if (_vertices.size() < _maxVerticesPerQuad) {
+		std::cout << "Model has less vertices then give max size per leaf. All informations stored in root." << std::endl;
+		return;
+	}
+
+	this->vertexColorList.resize(_vertices.size());
+
+	this->splitLeaf(this->root, _vertices);
+
+	for (int i = 0; i < this->vertexColorList.size(); i++) {
+		this->vertexColorList[i] = _colors[i];
+	}
+
+	this->uploadPointCloud(_vertices, _normals, _radius);
+}
+
+
 PC_Octree::~PC_Octree()
 {
 	glDeleteBuffers(3, vboBox);
@@ -364,9 +400,6 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			if (leaf.endVertices - leaf.beginVertices == 0) {
 				std::cout << "Error: Empty Box!" << std::endl;
 			}
-
-			//std::cout << "Begin: " << leaf.beginVertices << ", end: " << leaf.endVertices << std::endl;
-			//std::cout << "Color: (" << vertexColorList[leaf.beginVertices].x << "," << vertexColorList[leaf.beginVertices].y << "," << vertexColorList[leaf.beginVertices].z << ")" << std::endl;
 
 			glm::mat4 modelMatrix;
 			this->getAabbLeafUniforms(modelMatrix, leaf);

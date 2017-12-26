@@ -107,3 +107,58 @@ void loadBigFile(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& norma
 	}
 
 }
+
+void loadPolyFile(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& normals, std::vector<float>& radii, std::vector<glm::vec3>& colors, const char *filename) {
+	vertices.clear();
+	normals.clear();
+	radii.clear();
+	colors.clear();
+
+	std::cout << "Load poly file" << std::endl;
+
+	FILE * file = fopen(filename, "r");
+	if (file == NULL) {
+		cerr << "Model file not found: " << filename << endl;
+		exit(0);
+	}
+
+	int numVertices = 0;
+
+	while (1)
+	{
+		char lineHeader[128];
+		int res = fscanf(file, "%s", lineHeader);
+		if (res == EOF)
+			break;
+
+		if (strcmp(lineHeader, "element") == 0)
+		{		
+			fscanf(file, "%s", lineHeader);
+			if (strcmp(lineHeader, "vertex") == 0)
+			{
+				fscanf(file, "%i\n", &numVertices);
+				//std::cout << numVertices << std::endl;
+			}
+		}
+
+		if (strcmp(lineHeader, "end_header") == 0){
+			for (int i = 0; i < numVertices; i++) {
+				glm::vec3 vertex;
+				glm::vec3 normal;
+				glm::vec3 color;
+				float alpha;
+
+				fscanf(file, "%f %f %f %f %f %f %f %f %f %f\n", &vertex.x, &vertex.y, &vertex.z, &normal.x, &normal.y, &normal.z, &color.x, &color.y, &color.z, &alpha);
+				vertices.push_back(vertex);
+				normals.push_back(normal);
+				radii.push_back(1.0f);
+				color /= 255.0f;
+				colors.push_back(color);
+			}
+
+			break;
+		}
+
+	}
+
+}
