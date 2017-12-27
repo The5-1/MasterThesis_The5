@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="VTK">
-      <UniqueIdentifier>{da3f86a5-d86f-4451-8178-4f3f08f188ca}</UniqueIdentifier>
-    </Filter>
     <Filter Include="SparseVoxelOctree">
       <UniqueIdentifier>{3524c7b0-2043-4c1e-84dc-361135c86bae}</UniqueIdentifier>
     </Filter>
@@ -27,6 +24,9 @@
     </Filter>
     <Filter Include="PC-Octree">
       <UniqueIdentifier>{1e5df722-7fb4-47a8-ac11-ea30f7f80a34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tree-Structure\VTK">
+      <UniqueIdentifier>{da3f86a5-d86f-4451-8178-4f3f08f188ca}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -79,7 +79,7 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="VTKfile.h">
-      <Filter>VTK</Filter>
+      <Filter>Tree-Structure\VTK</Filter>
     </ClInclude>
     <ClInclude Include="nanoflann.h">
       <Filter>NanoFLANN</Filter>
@@ -114,6 +114,9 @@
     <ClInclude Include="ObjToPcd.h">
       <Filter>PC-Octree</Filter>
     </ClInclude>
+    <ClInclude Include="PC_OctreeSparse.h">
+      <Filter>PC-Octree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="HalfEdgeMesh.cpp">
@@ -138,7 +141,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VTKfile.cpp">
-      <Filter>VTK</Filter>
+      <Filter>Tree-Structure\VTK</Filter>
     </ClCompile>
     <ClCompile Include="SVO.cpp">
       <Filter>SparseVoxelOctree</Filter>
@@ -150,6 +153,9 @@
       <Filter>Tree-Structure</Filter>
     </ClCompile>
     <ClCompile Include="PC_Octree.cpp">
+      <Filter>PC-Octree</Filter>
+    </ClCompile>
+    <ClCompile Include="PC_OctreeSparse.cpp">
       <Filter>PC-Octree</Filter>
     </ClCompile>
   </ItemGroup>

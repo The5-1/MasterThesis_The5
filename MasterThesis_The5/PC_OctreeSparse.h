@@ -9,7 +9,7 @@
 #include <vector>
 #include <bitset>
 
-struct Octree {
+struct OctreeSparse {
 public:
 	int beginVertices;
 	int endVertices;
@@ -18,21 +18,21 @@ public:
 	//glm::vec3 averageColor;
 
 	std::bitset<8> bitMaskChildren; // [0,0,0,0,0,0,0,0], set to 1 if the corresponding child exists
-	std::vector<Octree> children;
+	std::vector<OctreeSparse> children;
 
 	//Experimental: Helper variables to draw a box around the leaf
 	glm::vec3 minLeafBox, maxLeafBox;
 	int boxColorId;
 
-	Octree() {
+	OctreeSparse() {
 	}
 
-	Octree(int _beginVertices, int _endVertices) {
+	OctreeSparse(int _beginVertices, int _endVertices) {
 		this->beginVertices = _beginVertices;
 		this->endVertices = _endVertices;
 	}
 
-	Octree(int _beginVertices, int _endVertices, glm::vec3 _minLeafBox, glm::vec3 _maxLeafBox) {
+	OctreeSparse(int _beginVertices, int _endVertices, glm::vec3 _minLeafBox, glm::vec3 _maxLeafBox) {
 		this->beginVertices = _beginVertices;
 		this->endVertices = _endVertices;
 		this->maxLeafBox = _maxLeafBox;
@@ -43,11 +43,11 @@ public:
 };
 
 
-class PC_Octree
+class PC_OctreeSparse
 {
 //Variables
 public:
-	Octree root;
+	OctreeSparse root;
 
 	//AABB
 	glm::vec3 minBoundingBox, maxBoundingBox;
@@ -81,15 +81,15 @@ public:
 
 //Functions
 public:
-	PC_Octree();
-	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad);
+	PC_OctreeSparse();
+	PC_OctreeSparse(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad);
 
-	PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad);
+	PC_OctreeSparse(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad);
 
-	~PC_Octree();
+	~PC_OctreeSparse();
 
 	void getAabbUniforms(glm::mat4& _modelMatrix);
-	void getAabbLeafUniforms(glm::mat4 & _modelMatrix, Octree _leaf);
+	void getAabbLeafUniforms(glm::mat4 & _modelMatrix, OctreeSparse _leaf);
 
 	void drawBox();
 
@@ -98,22 +98,16 @@ public:
 
 	bool onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point);
 
-	int boxFrstrumCull(Octree & leaf, glm::vec3 & normal, glm::vec3 & point);
+	int boxFrstrumCull(OctreeSparse & leaf, glm::vec3 & normal, glm::vec3 & point);
 
-	void cullWithViewPlane(Octree & leaf, viewFrustrum & vF, glm::vec3 viewNormal, glm::vec3 viewPoint);
+	void cullWithViewFrustrum(OctreeSparse& leaf, viewFrustrum& vF);
 
-	void cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF);
+	void addBoxToDraw(OctreeSparse & leaf, glm::vec3 color);
 
-	void addBoxToDraw(Octree & leaf, glm::vec3 color);
-
-	void initViewFrustrumCull(Octree & leaf, viewFrustrum & vF);
-
-	void drawPointCloudInFrustrumPrep(Octree& leaf, viewFrustrum& vF);
-
-	void drawPointCloudInFrustrum(Octree& leaf, viewFrustrum& vF);
+	void initViewFrustrumCull(OctreeSparse & leaf, viewFrustrum & vF);
 
 private:
-	void splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices);
+	void splitLeaf(OctreeSparse& leaf, std::vector<glm::vec3>& _vertices);
 	void copyIndexVector(std::vector<int>& leafIndex, int offset);
 	void getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices);
 	void getAABB(glm::vec3 & min, glm::vec3& max, std::vector<glm::vec3>& _vertices, std::vector<int> _indices);

@@ -1153,13 +1153,13 @@ viewFrustrum::viewFrustrum(glm::mat4& modelMatrix, glm::mat4& viewMatrix, glm::m
 void viewFrustrum::change(glm::mat4 & modelMatrix, glm::mat4 & viewMatrix, glm::mat4 & projMatrix)
 {
 	std::vector<glm::vec4> tempVertices = { glm::vec4(-1.0f, -1.0f, -1.0f, 1.0f),	//Near
-		glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),	//Near
-		glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),		//Near
-		glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),	//Near
-		glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),	//Far
-		glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),		//Far
-		glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),		//Far
-		glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f) };	//Far
+		glm::vec4(1.0f, -1.0f, -1.0f, 1.0f),										//Near
+		glm::vec4(1.0f, 1.0f, -1.0f, 1.0f),											//Near
+		glm::vec4(-1.0f, 1.0f, -1.0f, 1.0f),										//Near
+		glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f),										//Far
+		glm::vec4(1.0f, -1.0f, 1.0f, 1.0f),											//Far
+		glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),											//Far
+		glm::vec4(-1.0f, 1.0f, 1.0f, 1.0f) };										//Far
 
 	this->vertices.resize(8);
 	glm::mat4 temp = glm::inverse(projMatrix * viewMatrix * modelMatrix);

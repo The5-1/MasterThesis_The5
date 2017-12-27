@@ -1,6 +1,6 @@
 #define GLEW_STATIC //Using the static lib, so we need to enable it
 
-#include "PC_Octree.h"
+#include "PC_OctreeSparse.h"
 
 #include <glm/gtc/matrix_transform.hpp> 
 #include <algorithm>
@@ -8,11 +8,11 @@
 /* *********************************************************************************************************
 //Functions (public)
 ********************************************************************************************************* */
-PC_Octree::PC_Octree()
+PC_OctreeSparse::PC_OctreeSparse()
 {
 }
 
-PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad)
+PC_OctreeSparse::PC_OctreeSparse(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius, int _maxVerticesPerQuad)
 {
 	this->getAABB(minBoundingBox, maxBoundingBox, _vertices);
 
@@ -26,11 +26,10 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& 
 	this->root.maxLeafBox = this->maxBoundingBox;
 	this->root.minLeafBox = this->minBoundingBox;
 
-	
 	for (int i = 0; i < this->root.endVertices; i++) {
 		this->vertexIndexList.push_back(i);
 	}
-	
+
 
 	if (_vertices.size() < _maxVerticesPerQuad) {
 		std::cout << "Model has less vertices then give max size per leaf. All informations stored in root." << std::endl;
@@ -44,7 +43,7 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& 
 	this->uploadPointCloud(_vertices, _normals, _radius);
 }
 
-PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad)
+PC_OctreeSparse::PC_OctreeSparse(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<glm::vec3>& _colors, std::vector<float>& _radius, int _maxVerticesPerQuad)
 {
 	this->getAABB(minBoundingBox, maxBoundingBox, _vertices);
 
@@ -80,13 +79,13 @@ PC_Octree::PC_Octree(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& 
 }
 
 
-PC_Octree::~PC_Octree()
+PC_OctreeSparse::~PC_OctreeSparse()
 {
 	glDeleteBuffers(3, vboBox);
 }
 
 
-void PC_Octree::getAabbUniforms(glm::mat4 & _modelMatrix)
+void PC_OctreeSparse::getAabbUniforms(glm::mat4 & _modelMatrix)
 {
 	_modelMatrix = glm::mat4(1.0f);
 	
@@ -97,7 +96,7 @@ void PC_Octree::getAabbUniforms(glm::mat4 & _modelMatrix)
 	_modelMatrix = glm::scale(_modelMatrix, scaleVec);
 }
 
-void PC_Octree::getAabbLeafUniforms(glm::mat4 & _modelMatrix, Octree _leaf)
+void PC_OctreeSparse::getAabbLeafUniforms(glm::mat4 & _modelMatrix, OctreeSparse _leaf)
 {
 	_modelMatrix = glm::mat4(1.0f);
 
@@ -108,7 +107,7 @@ void PC_Octree::getAabbLeafUniforms(glm::mat4 & _modelMatrix, Octree _leaf)
 	_modelMatrix = glm::scale(_modelMatrix, scaleVec);
 }
 
-void PC_Octree::drawBox()
+void PC_OctreeSparse::drawBox()
 {
 	//Enable wireframe mode
 	glPolygonMode(GL_FRONT, GL_LINE);
@@ -127,7 +126,7 @@ void PC_Octree::drawBox()
 	glPolygonMode(GL_BACK, GL_FILL);
 }
 
-void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius)
+void PC_OctreeSparse::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<glm::vec3>& _normals, std::vector<float>& _radius)
 {
 	glGenBuffers(5, vboPC);
 
@@ -149,7 +148,7 @@ void PC_Octree::uploadPointCloud(std::vector<glm::vec3>& _vertices, std::vector<
 	
 }
 
-void PC_Octree::drawPointCloud()
+void PC_OctreeSparse::drawPointCloud()
 {
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, vboPC[0]);
@@ -169,11 +168,9 @@ void PC_Octree::drawPointCloud()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboPC[4]);
 	glDrawElements(GL_POINTS, vertexIndexList.size(), GL_UNSIGNED_INT, 0);
-
-	//glDrawArrays(GL_POINTS, 0, this->vertexIndexList.size()); //We only sort the index array, so we cant use this
 }
 
-bool PC_Octree::onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point) {
+bool PC_OctreeSparse::onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::vec3& point) {
 	if (glm::dot(normal, (corner - point)) > 0) {
 		return true;
 	}
@@ -182,7 +179,7 @@ bool PC_Octree::onCorrectPlaneSide(glm::vec3& corner, glm::vec3& normal, glm::ve
 }
 
 
-int PC_Octree::boxFrstrumCull(Octree& leaf, glm::vec3& normal, glm::vec3& point) {
+int PC_OctreeSparse::boxFrstrumCull(OctreeSparse& leaf, glm::vec3& normal, glm::vec3& point) {
 	//Return 0 if box inside frustrum
 	//Return 1 if box outside frustrum
 	//Return 2 if box cuts Frustrum
@@ -232,9 +229,9 @@ int PC_Octree::boxFrstrumCull(Octree& leaf, glm::vec3& normal, glm::vec3& point)
 	return 2;
 }
 
-void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
+void PC_OctreeSparse::cullWithViewFrustrum(OctreeSparse& leaf, viewFrustrum& vF)
 {
-	int partiallyInside = 0;
+	bool inside = false, outside = false;
 	int inOutTest = -1;
 
 	//1
@@ -246,15 +243,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 	//2
@@ -266,15 +260,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 	//3
@@ -286,15 +277,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 	//4
@@ -306,15 +294,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 
@@ -327,15 +312,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 	//6
@@ -347,15 +329,12 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	else if (inOutTest == 2) {
 		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
 		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
+			this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				cullWithViewFrustrum(leaf.children[i], vF);
-			}
-			return;
+		for (int i = 0; i < leaf.children.size(); i++) {
+			cullWithViewFrustrum(leaf.children[i], vF);
 		}
+		return;
 	}
 
 	//Box inside Frsutrum 
@@ -363,7 +342,7 @@ void PC_Octree::cullWithViewFrustrum(Octree& leaf, viewFrustrum& vF)
 	return;
 }
 
-void PC_Octree::addBoxToDraw(Octree& leaf, glm::vec3 color) {
+void PC_OctreeSparse::addBoxToDraw(OctreeSparse& leaf, glm::vec3 color) {
 	glm::mat4 modelMatrix;
 	this->getAabbLeafUniforms(modelMatrix, leaf);
 	modelMatrixLowestLeaf.push_back(modelMatrix);
@@ -372,172 +351,12 @@ void PC_Octree::addBoxToDraw(Octree& leaf, glm::vec3 color) {
 	colorLowestLeaf.push_back(color);
 }
 
-void PC_Octree::initViewFrustrumCull(Octree& leaf, viewFrustrum& vF) {
-	//std::cout << "initViewFrstrumCull: Start culling" << std::endl;
+void PC_OctreeSparse::initViewFrustrumCull(OctreeSparse& leaf, viewFrustrum& vF) {
+	std::cout << "initViewFrstrumCull: Start culling" << std::endl;
 	this->modelMatrixLowestLeaf.clear();
 	this->colorLowestLeaf.clear();
 
 	this->cullWithViewFrustrum(leaf, vF);
-}
-
-void PC_Octree::drawPointCloudInFrustrumPrep(Octree& leaf, viewFrustrum& vF)
-{
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPC[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glEnableVertexAttribArray(1);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPC[1]);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glEnableVertexAttribArray(2);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPC[2]);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glEnableVertexAttribArray(3);
-	glBindBuffer(GL_ARRAY_BUFFER, vboPC[3]);
-	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboPC[4]);
-
-	this->drawPointCloudInFrustrum(leaf, vF);
-}
-
-void PC_Octree::drawPointCloudInFrustrum(Octree& leaf, viewFrustrum& vF)
-{
-	int partiallyInside = 0;
-	int inOutTest = -1;
-
-	//1
-	inOutTest = boxFrstrumCull(leaf, vF.farNormal, vF.farPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-	//2
-	inOutTest = boxFrstrumCull(leaf, vF.nearNormal, vF.nearPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-	//3
-	inOutTest = boxFrstrumCull(leaf, vF.leftNormal, vF.leftPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-	//4
-	inOutTest = boxFrstrumCull(leaf, vF.rightNormal, vF.rightPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-
-	//5
-	inOutTest = boxFrstrumCull(leaf, vF.upNormal, vF.upPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-	//6
-	inOutTest = boxFrstrumCull(leaf, vF.downNormal, vF.downPoint);
-	if (inOutTest == 1) {
-		//Box is compeltely outside of a plane, we can stop here
-		return;
-	}
-	else if (inOutTest == 2) {
-		//Box is partly inside the frustrum (if its not the leave yet keep splitting, else just take the entire box)
-		if (leaf.children.size() == 0) {
-			//this->addBoxToDraw(leaf, glm::vec3(1.0f, 0.0f, 0.0f));
-			partiallyInside++;
-		}
-		else {
-			for (int i = 0; i < leaf.children.size(); i++) {
-				drawPointCloudInFrustrum(leaf.children[i], vF);
-			}
-			return;
-		}
-	}
-
-	//Box inside Frsutrum 
-	//std::cout << leaf.beginVertices << " " << leaf.endVertices << ", " << leaf.endVertices - leaf.beginVertices << std::endl;
-	//if(leaf.endVertices - leaf.beginVertices <= 1){
-	//	return;
-	//}
-
-	glDrawElements(GL_POINTS, leaf.endVertices - leaf.beginVertices, GL_UNSIGNED_INT, (void*)(leaf.beginVertices * sizeof(GLuint)));
-	//glDrawArrays(GL_POINTS, leaf.beginVertices, leaf.endVertices - leaf.beginVertices);  //2nd Argument: begin of array , 3rd Arguemnt: How many to render (NOT up to which index!!!)
-	return;	
 }
 
 /* *********************************************************************************************************
@@ -572,7 +391,7 @@ Octree-Split-Names-Convention, the new boxes in z-Direction are labeled 001, 011
 
 
 
-void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
+void PC_OctreeSparse::splitLeaf(OctreeSparse& leaf, std::vector<glm::vec3>& _vertices) {
 	//std::cout << " -- Starting Split from " <<leaf.beginVertices <<" to " << leaf.endVertices << "--" << std::endl;
 
 	{
@@ -644,7 +463,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 				this->vertexColorList[i] = this->colorOctree[7];
 			}
 			else {
-				std::cout << "ERROR: PC_Octree.cpp could not place vertex into octree" << std::endl;
+				std::cout << "ERROR: PC_OctreeSparse.cpp could not place vertex into octree" << std::endl;
 			}
 		}
 
@@ -659,7 +478,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, splitDiagonal.y, 0.5f * splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf000);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf000.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf000.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf000.size() << std::endl;
 
@@ -682,7 +501,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 
 			//this->getAABB(min, max, _vertices, newLeaf010);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf010.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf010.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf010.size() << std::endl;
 			//std::cout << "Start Copy newLeaf010" << std::endl;
@@ -702,7 +521,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			//max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, 0.5f * splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf100);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf100.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf100.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf100.size() << std::endl;
 			//std::cout << "Start Copy newLeaf100" << std::endl;
@@ -720,7 +539,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf110);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf110.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf110.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf110.size() << std::endl;
 			//std::cout << "Start Copy newLeaf110" << std::endl;
@@ -739,7 +558,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, splitDiagonal.y, splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf000);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf001.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf001.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf001.size() << std::endl;
 			//std::cout << "Start Copy newLeaf001" << std::endl;
@@ -760,7 +579,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			//max = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf010);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf011.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf011.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf011.size() << std::endl;
 			//std::cout << "Start Copy newLeaf011" << std::endl;
@@ -780,7 +599,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			//min = leaf.minLeafBox + glm::vec3(0.5f * splitDiagonal.x, 0.5f * splitDiagonal.y, 0.5f * splitDiagonal.z);
 			//max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, splitDiagonal.y, splitDiagonal.z);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf101.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf101.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf101.size() << std::endl;
 			//std::cout << "Start Copy newLeaf101" << std::endl;
@@ -798,7 +617,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 			max = leaf.minLeafBox + glm::vec3(splitDiagonal.x, 0.5f * splitDiagonal.y, splitDiagonal.z);
 			//this->getAABB(min, max, _vertices, newLeaf110);
 
-			leaf.children.push_back(Octree(currentStart, currentStart + newLeaf111.size(), min, max));
+			leaf.children.push_back(OctreeSparse(currentStart, currentStart + newLeaf111.size(), min, max));
 
 			//std::cout << "currentStart: " << currentStart << ", currentEnd: " << currentStart + newLeaf111.size() << std::endl;
 			//std::cout << "Start Copy newLeaf111" << std::endl;
@@ -834,7 +653,7 @@ void PC_Octree::splitLeaf(Octree& leaf, std::vector<glm::vec3>& _vertices) {
 	}
 }
 
-void PC_Octree::copyIndexVector(std::vector<int>& leafIndex, int offset) {
+void PC_OctreeSparse::copyIndexVector(std::vector<int>& leafIndex, int offset) {
 	for (int i = 0; i < leafIndex.size(); i++) {
 		//std::cout << "i: " << i << std::endl;
 		//std::cout << "i + offset: " << i + offset << std::endl;
@@ -846,7 +665,7 @@ void PC_Octree::copyIndexVector(std::vector<int>& leafIndex, int offset) {
 	}
 }
 
-void PC_Octree::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices)
+void PC_OctreeSparse::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices)
 {
 	min = _vertices[0];
 	max = _vertices[0];
@@ -880,7 +699,7 @@ void PC_Octree::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& 
 	}
 }
 
-void PC_Octree::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices, std::vector<int> _indices)
+void PC_OctreeSparse::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& _vertices, std::vector<int> _indices)
 {
 	min = _vertices[_indices[0]];
 	max = _vertices[_indices[0]];
@@ -914,7 +733,7 @@ void PC_Octree::getAABB(glm::vec3& min, glm::vec3& max, std::vector<glm::vec3>& 
 	}
 }
 
-void PC_Octree::uploadGlBox()
+void PC_OctreeSparse::uploadGlBox()
 {
 	boxVertices = { glm::vec3(1.0, 0.0, 1.0),
 		glm::vec3(0.0, 0.0, 1.0),
