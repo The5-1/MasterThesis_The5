@@ -46,12 +46,7 @@ void main() {
 	//High-Quality Point-Based Rendering on Modern GPUs (Seite 3)
 	//float distanceCam = length( - viewPosition.xyz ); //Does not need to be divided by w! w = 1 (Viewtrafo, is only rotation/Translation)
 	//gl_PointSize = glPointSize * (1.0 / distanceCam) * (768.0 / 2.0);
-	
 
-
-	/* ******************************************************************
-	Backface-Culling (gl_points dont have an implemented backface-cull)
-	****************************************************************** */
 	#ifdef BACKFACE_CULLING
 	vec3 viewDirection = viewPoint - vPosition;
 	if(dot(viewDirection, vNormal) < 0 ){

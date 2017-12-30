@@ -343,6 +343,7 @@ void init() {
 	*****************************************************************/
 	std::vector<glm::vec3> bigVertices, bigNormals, bigColors;
 	std::vector<float> bigRadii;
+
 	/*************
 	***CityFront
 	**************/
@@ -362,14 +363,14 @@ void init() {
 	/*************
 	***TeaPot
 	**************/
-	loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/The5/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/bigTeapotVNA_100.big");
-	octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
+	//loadBigFile(bigVertices, bigNormals, bigRadii, "C:/Users/The5/Documents/Visual Studio 2015/Projects/MasterThesis_The5/MasterThesis_The5/pointclouds/bigTeapotVNA_100.big");
+	//octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
 
 	/*************
 	***NanoSuit
 	**************/
-	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
-	//octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
+	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
 
 	/*************
 	***Sphere
@@ -590,6 +591,7 @@ void standardScene() {
 		pointShader.uniform("viewPoint", glm::vec3(cam.position));
 		
 		pointShader.uniform("glPointSize", glPointSizeFloat);
+		pointShader.uniform("depthToPosTexture", false);
 
 		octree->drawPointCloud();
 		pointShader.disable();
@@ -798,6 +800,8 @@ void standardSceneFBO() {
 			pointShader.uniform("lightPos", lightPos);
 			pointShader.uniform("glPointSize", glPointSizeFloat);
 
+			pointShader.uniform("depthToPosTexture", false);
+
 			octree->drawPointCloud();
 			pointShader.disable();
 			glDisable(GL_POINT_SPRITE);
@@ -980,7 +984,6 @@ void standardSceneFBO() {
 	fbo->unbindTexture(2);
 	standardMiniColorFboShader.disable();
 }
-
 
 void splattingGITscene() {
 	fbo->Bind();{
@@ -1430,6 +1433,14 @@ void standardSceneDeferredUpdate() {
 }
 
 void standardSceneDeferredUpdateCull() {
+	if (setViewFrustrum) {
+	}
+	else {
+		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
+		//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
+		viewfrustrum->getPlaneNormal(false);
+		viewfrustrum->upload();
+	}
 
 	/* ********************************************
 	modelMatrix
@@ -1559,22 +1570,8 @@ void standardSceneDeferredUpdateCull() {
 	pointDeferredUpdatedShader.uniform("lightVecV", glm::vec3(lightPosView));
 	quad->draw();
 	pointDeferredUpdatedShader.disable();
-
-	if (setViewFrustrum) {
-		setViewFrustrum = false;
-		viewfrustrum->change(glm::mat4(1.0f), viewMatrix, projMatrix);
-		//viewfrustrum->frustrumToBoxes(glm::vec3(cam.viewDir));
-		viewfrustrum->getPlaneNormal(false);
-
-		if (fillViewFrustrum) {
-			viewfrustrum->uploadQuad();
-		}
-		else {
-			viewfrustrum->upload();
-		}
-		std::cout << "New Frustrum set" << std::endl;
-	}
 }
+
 void kernelScene(){
 	//Debug Render Filter
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

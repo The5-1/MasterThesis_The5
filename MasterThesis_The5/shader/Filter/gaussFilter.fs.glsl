@@ -17,11 +17,6 @@ uniform float resolutionHEIGHT;
 uniform float radius;
 uniform vec2 dir;
 
-//Pointsize
-//#define COLOR_FILTER 0
-//#define NORMAL_FILTER 0
-//#define POS_FILTER 0
-//#define DEPTH_FILTER 0
 
 vec3 filterTexture(sampler2D texture){
 	//this will be our RGBA sum
@@ -59,10 +54,51 @@ vec3 filterTexture(sampler2D texture){
 	return sum.rgb;
 }
 
+
+vec3 filterTextureWithDepth(sampler2D colorTexture, sampler2D depthTexture){
+	//this will be our RGBA sum
+	vec4 sum = vec4(0.0);
+	
+	//our original texcoord for this fragment
+	vec2 tc = vTexCoord;
+	
+	//the amount to blur, i.e. how far off center to sample from 
+	//1.0 -> blur by one pixel
+	//2.0 -> blur by two pixels, etc.
+	float blurWidth = radius / resolutionWIDTH; 
+    float blurHeight = radius / resolutionHEIGHT; 
+
+	//the direction of our blur
+	//(1.0, 0.0) -> x-axis blur
+	//(0.0, 1.0) -> y-axis blur
+	float hstep = dir.x;
+	float vstep = dir.y;
+    
+	//apply blurring, using a 9-tap filter with predefined gaussian weights
+
+	float currentDepth = texture2D(depthTexture, vec2(tc.x, tc.y)).r;
+
+	sum += texture2D(colorTexture, vec2(tc.x - 4.0*blurWidth*hstep, tc.y - 4.0*blurHeight*vstep)) * 0.0162162162;
+	sum += texture2D(colorTexture, vec2(tc.x - 3.0*blurWidth*hstep, tc.y - 3.0*blurHeight*vstep)) * 0.0540540541;
+	sum += texture2D(colorTexture, vec2(tc.x - 2.0*blurWidth*hstep, tc.y - 2.0*blurHeight*vstep)) * 0.1216216216;
+	sum += texture2D(colorTexture, vec2(tc.x - 1.0*blurWidth*hstep, tc.y - 1.0*blurHeight*vstep)) * 0.1945945946;
+	
+	sum += texture2D(colorTexture, vec2(tc.x, tc.y)) * 0.2270270270;
+	
+	sum += texture2D(colorTexture, vec2(tc.x + 1.0*blurWidth*hstep, tc.y + 1.0*blurHeight*vstep)) * 0.1945945946;
+	sum += texture2D(colorTexture, vec2(tc.x + 2.0*blurWidth*hstep, tc.y + 2.0*blurHeight*vstep)) * 0.1216216216;
+	sum += texture2D(colorTexture, vec2(tc.x + 3.0*blurWidth*hstep, tc.y + 3.0*blurHeight*vstep)) * 0.0540540541;
+	sum += texture2D(colorTexture, vec2(tc.x + 4.0*blurWidth*hstep, tc.y + 4.0*blurHeight*vstep)) * 0.0162162162;
+
+	return sum.rgb;
+}
+
 void main() {
 	//Color
  	//outColor = vec4(texture2D(texColor, vTexCoord).rgb, 1.0);
-	outColor = vec4( filterTexture(texColor), 1.0);
+	outColor = vec4( filterTextureWithDepth(texColor, texPosition), 1.0);
+	//outColor = vec4( filterTexture(texColor), 1.0);
+	//outColor = vec4(vec3(texture2D(texDepth, vTexCoord).r), 1.0); //Can NOT directly write depth into rgb buffer
 
 	//Normal
     outNormal = vec4(texture2D(texNormal, vTexCoord).rgb, 1.0);

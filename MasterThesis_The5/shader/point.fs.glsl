@@ -8,6 +8,7 @@ layout(location = 2) out vec4 outPos;
 
 uniform float nearPlane;
 uniform float farPlane;
+uniform bool depthToPosTexture;
 
 in vec4 viewNormal;
 in vec4 viewPosition;
@@ -20,6 +21,7 @@ in vec3 lightVecV;
 //#define SIMPLE_POINT 0
 #define AFFINE_PROJECTED 0
 //#define POTREE 0
+
 
 //Lighting
 //#define PHONG 0
@@ -96,6 +98,9 @@ void main(){
 
 		//Update depth
 		gl_FragDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w ; 
+		if(depthToPosTexture){
+			outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w  ), 1.0);
+		}
 	#endif
 
 	/* ******************************************************************

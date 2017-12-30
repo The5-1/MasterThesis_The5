@@ -162,3 +162,27 @@ void loadPolyFile(std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& norm
 	}
 
 }
+
+//void readLasFile() {
+//	std::ifstream ifs;
+//	ifs.open("D:/Dev/Assets/Pointcloud/ATL_RGB_vehicle_scan - 20171228T203225Z - 001/ATL_RGB_vehicle_scan/Las - Files/ScanLook_Vehicle01.las", std::ios::in | std::ios::binary);
+//
+//	LASreadOpener lasreadopener;
+//	lasreadopener.set_file_name("D:/Dev/Assets/Pointcloud/ATL_RGB_vehicle_scan - 20171228T203225Z - 001/ATL_RGB_vehicle_scan/Las - Files/ScanLook_Vehicle01.las");
+//
+//	if (!lasreadopener.active())
+//	{
+//		fprintf(stderr, "ERROR: no input specified\n");
+//	}
+//
+//	LASreader* lasreader = lasreadopener.open();
+//	if (lasreader == 0)
+//	{
+//		fprintf(stderr, "ERROR: could not open lasreader\n");
+//	}
+//
+//	fprintf(stderr, "reading %I64d points from '%s'.\n", lasreader->npoints, lasreadopener.get_file_name());
+//
+//	lasreader->close();
+//	delete lasreader;
+//}
