@@ -73,9 +73,12 @@ void main(){
 		//outColor.w = (depthBuffer - newDepth) * 10.0;
 
 		float depth_new = gl_FragCoord.z+ (pow(currentRadius, 2)) * gl_FragCoord.w;
-		float depth_old = texture(texDepth, vec2(gl_FragCoord.x/width, gl_FragCoord.y/height)).r;
+
+		float depth_old = texture(texDepth, vec2(gl_FragCoord.x/width, gl_FragCoord.y/height)).r; //Look up previous -epsillon depth by using the pixel cooridnates directly for lookup
+
 		float weight = (depth_old - depth_new)/(depthEpsilonOffset); //when the distance is epsillon, this should be 1.0, when it is smaller, this should be <1.0
-		outColor = vec4(color*weight,weight);
+		
+		outColor = vec4(color*weight, weight);
 
 		outDepth = vec4(vec3(depthBuffer), 1.0);;
 		outNormal = vec4(vec3(depthBuffer), 1.0);

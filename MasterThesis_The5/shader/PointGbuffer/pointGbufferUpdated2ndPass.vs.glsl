@@ -27,13 +27,34 @@ out vec4 positionFBO;
 
 #define BACKFACE_CULLING 0
 
+
+#define GAMMA_CORRECTION 1
+
+vec3 LinearToSRGB(vec3 linear)
+{
+#if GAMMA_CORRECTION > 0
+	return pow(linear,vec3(1.0/2.2));
+#else
+	return linear;
+#endif
+}
+
+vec3 srgbToLinear(vec3 linear)
+{
+#if GAMMA_CORRECTION > 0
+	return pow(linear,vec3(2.2));
+#else
+	return linear;
+#endif
+}
+
 void main() {
 	//Normal
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
 	viewNormal =  normalMatrix * vec4(vNormal, 0.0); //homogenous coordinate = 0 for vectors
 
 	//Color
-	color = vColor;
+	color = srgbToLinear(vColor);
 
 	//Position	
 	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);

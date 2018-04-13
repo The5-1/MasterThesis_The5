@@ -41,21 +41,17 @@ void main(){
 	#ifdef SIMPLE_POINT
 		vec2 circCoord0 = gl_PointCoord;
 		float alpha = min(1.0,(1.0-length(circCoord0*2.0-1.0))*4.0);
+		outColor = vec4(color,1.0);
+		
 		if(alpha <= 0.0)
 		{
 			discard;
 		}
+		else if(alpha < 0.2)
+		{
+			outColor = vec4(0.0, 0.0, 0.0, 1.0);
+		}
 		
-		//vec2 circCoord = 2.0 * gl_PointCoord - 1.0;
-		
-		//if (dot(circCoord, circCoord) > 1.0) {
-		//	discard;
-		//}
-		
-		
-		//outColor = abs(vec4(vec3(circCoord.s, circCoord.t, 0.0)*alpha, 1.0));
-		//outColor = vec4(1.0)*alpha;
-		outColor = vec4(color,1.0);
 
 		
 		//outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
@@ -100,6 +96,7 @@ void main(){
 		gl_FragDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w ; 
 		if(depthToPosTexture){
 			outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w  ), 1.0);
+			//outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) ), 1.0);
 		}
 	#endif
 

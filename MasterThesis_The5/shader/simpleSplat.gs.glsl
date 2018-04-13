@@ -25,7 +25,7 @@ out FragmentData
 
 void main()
 {
-	float splatSize = 10.0;
+	float splatSize = 8.0;
 
 	// discard outliers
 	if (VertexIn[0].radius > 0.0)

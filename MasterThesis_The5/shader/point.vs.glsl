@@ -21,7 +21,7 @@ out vec3 color;
 out vec4 positionFBO;
 out vec3 lightVecV;
 
-//#define BACKFACE_CULLING 0
+#define BACKFACE_CULLING 0
 
 //Pointsize
 //#define PS_BASIC 0

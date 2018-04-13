@@ -10,6 +10,6 @@ in vec2 tc;
 
 void main() 
 { 
-	float col = texture2D(tex, tc).r;
+	float col = texture2D(tex, tc).r * 0.7;
 	out0 = vec4(col, col, col, 1);
 }

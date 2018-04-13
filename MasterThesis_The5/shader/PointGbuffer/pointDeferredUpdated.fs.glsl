@@ -18,6 +18,27 @@ uniform vec3 lightVecV;
 #define BLENDING 0
 #define DEPTH_DIFFERENCE 0
 
+#define GAMMA_CORRECTION 1
+
+vec3 LinearToSRGB(vec3 linear)
+{
+#if GAMMA_CORRECTION > 0
+	return pow(linear,vec3(1.0/2.2));
+#else
+	return linear;
+#endif
+}
+
+vec3 srgbToLinear(vec3 linear)
+{
+#if GAMMA_CORRECTION > 0
+	return pow(linear,vec3(2.2));
+#else
+	return linear;
+#endif
+}
+
+
 void main(){
     vec4 dif = texture2D(texColor, tc);
 	vec4 nor = texture2D(texNormal, tc);
@@ -36,6 +57,9 @@ void main(){
 
 	#ifdef BLENDING
 		outColor = dif / (dif.w); //get rid of the initial alpha of the clear color, if clearcolor is 0.0 we should be good
+
+		outColor.rgb = LinearToSRGB(outColor.rgb);
+
 		outNormal = nor / nor.w;
 		outPos = pos / pos.w;
 		gl_FragDepth = texture2D(texDepth, tc).r;

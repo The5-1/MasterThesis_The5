@@ -6,6 +6,7 @@
 #include <Ant/AntTweakBar.h>
 #include <memory>
 #include <algorithm>
+#include <ctime>
 #include "helper.h"
 #include "Shader.h"
 #include "Skybox.h"
@@ -369,20 +370,20 @@ void init() {
 	/*************
 	***NanoSuit
 	**************/
-	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
-	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
+	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	//octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
 
 	/*************
 	***Sphere
 	**************/
-	//sphere = new solidSphere(1.0f, 30, 30);
-	//std::vector<glm::vec3> sphereNormals;
-	//std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
-	//for (int i = 0; i < sphere->vertices.size(); i++) {
-	//	sphereNormals.push_back(sphere->vertices[i]);
-	//	sphere->vertices[i] = 3.0f * sphere->vertices[i];
-	//}
-	//octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
+	sphere = new solidSphere(1.0f, 30, 30);
+	std::vector<glm::vec3> sphereNormals;
+	std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
+	for (int i = 0; i < sphere->vertices.size(); i++) {
+		sphereNormals.push_back(sphere->vertices[i]);
+		sphere->vertices[i] = 3.0f * sphere->vertices[i];
+	}
+	octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
 
 
 
@@ -497,13 +498,13 @@ void standardScene() {
 	/* ********************************************
 	Coordinate System
 	**********************************************/
-	basicColorShader.enable();
-	modelMatrix = glm::scale(glm::vec3(1.0f));
-	basicColorShader.uniform("modelMatrix", modelMatrix);
-	basicColorShader.uniform("viewMatrix", viewMatrix);
-	basicColorShader.uniform("projMatrix", projMatrix);
-	coordSysstem->draw();
-	basicColorShader.disable();
+	//basicColorShader.enable();
+	//modelMatrix = glm::scale(glm::vec3(1.0f));
+	//basicColorShader.uniform("modelMatrix", modelMatrix);
+	//basicColorShader.uniform("viewMatrix", viewMatrix);
+	//basicColorShader.uniform("projMatrix", projMatrix);
+	//coordSysstem->draw();
+	//basicColorShader.disable();
 
 	/* ********************************************
 	Octree
@@ -593,7 +594,12 @@ void standardScene() {
 		pointShader.uniform("glPointSize", glPointSizeFloat);
 		pointShader.uniform("depthToPosTexture", false);
 
+		clock_t begin = clock();
 		octree->drawPointCloud();
+		clock_t end = clock();
+		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+		std::cout << "Runtime: " << elapsed_secs << std::endl;
+
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);
 		glDisable(GL_PROGRAM_POINT_SIZE);
@@ -710,13 +716,13 @@ void standardSceneFBO() {
 		/* ********************************************
 		Coordinate System
 		**********************************************/
-		basicColorShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		basicColorShader.uniform("modelMatrix", modelMatrix);
-		basicColorShader.uniform("viewMatrix", viewMatrix);
-		basicColorShader.uniform("projMatrix", projMatrix);
-		coordSysstem->draw();
-		basicColorShader.disable();
+		//basicColorShader.enable();
+		//modelMatrix = glm::scale(glm::vec3(1.0f));
+		//basicColorShader.uniform("modelMatrix", modelMatrix);
+		//basicColorShader.uniform("viewMatrix", viewMatrix);
+		//basicColorShader.uniform("projMatrix", projMatrix);
+		//coordSysstem->draw();
+		//basicColorShader.disable();
 
 		/* ********************************************
 		Octree
@@ -841,7 +847,7 @@ void standardSceneFBO() {
 			viewfrustrum->drawQuad();
 		}
 		else {
-			viewfrustrum->draw();
+			//viewfrustrum->draw();
 		}
 
 		basicColorShader.disable();
