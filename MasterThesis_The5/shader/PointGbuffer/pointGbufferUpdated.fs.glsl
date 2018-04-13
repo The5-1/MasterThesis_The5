@@ -21,6 +21,11 @@ in vec3 coordinateGridPos;
 
 
 void main(){ 
+
+	/* Idea: we write a parabolic depth
+	**
+	*/
+
 	//outNormal = vec4(0.5 * viewNormal.xyz + vec3(0.5), 1.0);
 	//outPos = vec4(positionFBO.xyz/positionFBO.w, 1.0);
 	//outNormal = vec4( vec3(texture(texDepth, 0.5 * gl_FragCoord.xy +0.5).r) , 1.0);
@@ -56,10 +61,18 @@ void main(){
 		//Update depth
 		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2)) * gl_FragCoord.w + depthEpsilonOffset;
 
+
+		/* BRUTE FORCE: 
+		** WARNING: BROKEN!
+		** we completely ditch the depth test here, so what we write to the colors is complete nonsense!
+		** Original Idea: write new depth to
+		*/
 		outDepth = vec4(vec3(newDepth), 1.0);
 		outColor = vec4(vec3(newDepth), 1.0);
 		outNormal = vec4(vec3(newDepth), 1.0);
 		outPos= vec4(vec3(newDepth), 1.0);
+
+
 		gl_FragDepth = newDepth; 
 	#endif
 }

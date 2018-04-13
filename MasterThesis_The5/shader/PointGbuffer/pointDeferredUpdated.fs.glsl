@@ -40,7 +40,10 @@ vec3 srgbToLinear(vec3 linear)
 
 
 void main(){
-    vec4 dif = texture2D(texColor, tc);
+
+    vec4 dif = texture2D(texColor, tc); //Fuzzy blended color goes in!
+	
+	//pointless, contain only depth again and again...
 	vec4 nor = texture2D(texNormal, tc);
 	vec4 pos = texture2D(texPosition, tc);
 	vec4 depth = texture2D(texDepth, tc);
@@ -58,7 +61,7 @@ void main(){
 	#ifdef BLENDING
 		outColor = dif / (dif.w); //get rid of the initial alpha of the clear color, if clearcolor is 0.0 we should be good
 
-		outColor.rgb = LinearToSRGB(outColor.rgb);
+		outColor.rgb = LinearToSRGB(outColor.rgb*10.0); //nanosuit is too dark, add *40.0 inside brackets! Make sure to turn on Gamma correction in this and the previous color shader!
 
 		outNormal = nor / nor.w;
 		outPos = pos / pos.w;

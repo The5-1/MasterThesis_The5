@@ -20,11 +20,23 @@ public:
 	// constructor generates the shader on the fly
 	// ------------------------------------------------------------------------
 	//Default Constructor
-	Shader() {
+
+
+	std::string shaderName;
+
+	Shader() 
+	{
+
 	}
 
 	Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr)
 	{
+		this->shaderName = "Vert: ";
+		this->shaderName += std::string(vertexPath);
+		this->shaderName += "\nFrag: ";
+		this->shaderName += std::string(fragmentPath);
+
+
 		// 1. retrieve the vertex/fragment source code from filePath
 		std::string vertexCode;
 		std::string fragmentCode;
@@ -232,7 +244,9 @@ private:
 			if (!success)
 			{
 				glGetShaderInfoLog(shader, 1024, NULL, infolog);
-				std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infolog << "\n -- --------------------------------------------------- -- " << std::endl;
+				std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infolog << std::endl;
+				std::cout << "Shader Files:\n" << shaderName << "\n" << std::endl;
+				std::cout << "\n -- --------------------------------------------------- -- " << std::endl;
 			}
 		}
 		else
@@ -241,7 +255,10 @@ private:
 			if (!success)
 			{
 				glGetProgramInfoLog(shader, 1024, NULL, infolog);
-				std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infolog << "\n -- --------------------------------------------------- -- " << std::endl;
+				std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infolog << std::endl;
+				std::cout << "Shader Files:\n" << shaderName << "\n" << std::endl;
+				std::cout << "\n -- --------------------------------------------------- -- " << std::endl;
+
 			}
 		}
 	}

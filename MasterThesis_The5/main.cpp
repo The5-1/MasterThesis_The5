@@ -81,9 +81,9 @@ Shader pointGbufferShader;
 Shader pointDeferredShader;
 Shader pointFuzzyShader;
 Shader pointFuzzyFinalShader;
-Shader pointGbufferUpdatedShader;
-Shader pointDeferredUpdatedShader;
-Shader pointGbufferUpdated2ndPassShader;
+Shader shader_Splat_DepthWithEpsillon;
+Shader shader_DrawOnscreenQuad;
+Shader shader_Splat_Fuzzy;
 
 //Filter
 Shader gaussFilterShader;
@@ -115,10 +115,10 @@ bool debugView = true;
 bool useGaussFilter = false;
 int filterPasses = 5;
 glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
-float glPointSizeFloat = 80.0f;
-float depthEpsilonOffset = 0.0f;
+float glPointSizeFloat = 400.0f;
+float depthEpsilonOffset = 0.05f;
 typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
-typedef enum { SIMPLE, DEBUG, DEFERRED, TRIANGLE, KERNEL, DEFERRED_UPDATE, CULL_DEFERRED} RENDER_TYPE; RENDER_TYPE m_currenRender = CULL_DEFERRED;
+typedef enum { MODE_FUZZY_WORKS, MODE_VORONOI_WITHBORDERS, DEBUG, MODE_ADDITIVE, MODE_GIT_TRIANGLE, MODE_SHOW_KERNEL_TEXTURE, MODE_FUZZY_TEST} RENDER_TYPE; RENDER_TYPE m_currenRender = MODE_FUZZY_WORKS;
 
 /* *********************************************************************************************************
 Helper Function
@@ -203,7 +203,7 @@ void setupTweakBar() {
 	TwAddVarRW(tweakBar, "Passes", TW_TYPE_INT16, &filterPasses, " label='Passes' min=0 step=1 max=100");
 
 	TwAddSeparator(tweakBar, "Debug Options", nullptr);
-	TwEnumVal render[] = { {SIMPLE, "SIMPLE"}, {DEBUG, "DEBUG"}, {DEFERRED, "DEFERRED"}, { DEFERRED_UPDATE, "DEFERRED_UPDATE"}, {CULL_DEFERRED ,"CULL_DEFERRED"}, { TRIANGLE , "TRIANGLE"}, { KERNEL, "KERNEL"} };
+	TwEnumVal render[] = { {MODE_VORONOI_WITHBORDERS, "MODE_VORONOI_WITHBORDERS"}, {DEBUG, "DEBUG"}, {MODE_ADDITIVE, "MODE_ADDITIVE"}, { MODE_FUZZY_WORKS, "MODE_FUZZY_WORKS"}, {MODE_FUZZY_TEST ,"MODE_FUZZY_TEST"}, { MODE_GIT_TRIANGLE , "MODE_GIT_TRIANGLE"}, { MODE_SHOW_KERNEL_TEXTURE, "MODE_SHOW_KERNEL_TEXTURE"} };
 	TwType renderTwType = TwDefineEnum("renderType", render, 7);
 	TwAddVarRW(tweakBar, "render", renderTwType, &m_currenRender, NULL);
 }
@@ -370,20 +370,20 @@ void init() {
 	/*************
 	***NanoSuit
 	**************/
-	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
-	//octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
+	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
 
 	/*************
 	***Sphere
 	**************/
-	sphere = new solidSphere(1.0f, 30, 30);
-	std::vector<glm::vec3> sphereNormals;
-	std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
-	for (int i = 0; i < sphere->vertices.size(); i++) {
-		sphereNormals.push_back(sphere->vertices[i]);
-		sphere->vertices[i] = 3.0f * sphere->vertices[i];
-	}
-	octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
+	//sphere = new solidSphere(1.0f, 30, 30);
+	//std::vector<glm::vec3> sphereNormals;
+	//std::vector<float> radiiSphere(sphere->vertices.size(), 1.0f);
+	//for (int i = 0; i < sphere->vertices.size(); i++) {
+	//	sphereNormals.push_back(sphere->vertices[i]);
+	//	sphere->vertices[i] = 3.0f * sphere->vertices[i];
+	//}
+	//octree = new PC_Octree(sphere->vertices, sphereNormals, radiiSphere, 100);
 
 
 
@@ -446,10 +446,11 @@ void loadShader(bool init) {
 	pointFuzzyFinalShader = Shader("./shader/PointGbuffer/pointFuzzyFinal.vs.glsl", "./shader/PointGbuffer/pointFuzzyFinal.fs.glsl");
 	
 	//Updated
-	pointGbufferUpdatedShader = Shader("./shader/PointGbuffer/pointGbufferUpdated.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated.fs.glsl");
-	pointDeferredUpdatedShader = Shader("./shader/PointGbuffer/pointDeferredUpdated.vs.glsl", "./shader/PointGbuffer/pointDeferredUpdated.fs.glsl");
-	pointGbufferUpdated2ndPassShader = Shader("./shader/PointGbuffer/pointGbufferUpdated2ndPass.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated2ndPass.fs.glsl");
+	shader_Splat_DepthWithEpsillon = Shader("./shader/PointGbuffer/pointGbufferUpdated.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated.fs.glsl");
+	shader_Splat_Fuzzy = Shader("./shader/PointGbuffer/pointGbufferUpdated2ndPass.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated2ndPass.fs.glsl");
 	
+	shader_DrawOnscreenQuad = Shader("./shader/PointGbuffer/pointDeferredUpdated.vs.glsl", "./shader/PointGbuffer/pointDeferredUpdated.fs.glsl");
+
 
 	//FBO
 	quadScreenSizedShader = Shader("./shader/FboShader/quadScreenSized.vs.glsl", "./shader/FboShader/quadScreenSized.fs.glsl");
@@ -471,7 +472,7 @@ Scenes: Unit cube + Pointcloud
 //	glClearColor(0.3f, 0.3f, 0.3f, 1);
 //}
 
-void standardScene() {
+void render_Voronoi_withBorders() {
 	//gl_check_error("standardScene");
 
 	//Clear
@@ -598,7 +599,7 @@ void standardScene() {
 		octree->drawPointCloud();
 		clock_t end = clock();
 		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-		std::cout << "Runtime: " << elapsed_secs << std::endl;
+		//std::cout << "Runtime: " << elapsed_secs << std::endl;
 
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);
@@ -687,8 +688,8 @@ void standardScene() {
 	//basicShader.disable();
 }
 
-void standardSceneFBO() {
-	//gl_check_error("standardSceneFBO");
+void render_Debug() {
+	//gl_check_error("render_Debug");
 	/* #### FBO ####*/
 	fbo->Bind();
 	{
@@ -991,7 +992,7 @@ void standardSceneFBO() {
 	standardMiniColorFboShader.disable();
 }
 
-void splattingGITscene() {
+void render_GIT_triangles() {
 	fbo->Bind();{
 		/* ********************************************
 		modelMatrix
@@ -1084,7 +1085,7 @@ void splattingGITscene() {
 	}
 }
 
-void standardSceneDeferred() {
+void render_Additive() {
 	/* ********************************************
 	modelMatrix
 	**********************************************/
@@ -1309,7 +1310,7 @@ void standardSceneDeferred() {
 	//std::cout << "IMPORTANT: Because of the 2-pass-depthbuffer, we can only render if the distance epsilon is GREATER 0" << std::endl;
 }
 
-void standardSceneDeferredUpdate() {
+void render_fuzzy_works() {
 	/* ********************************************
 	modelMatrix
 	**********************************************/
@@ -1331,21 +1332,27 @@ void standardSceneDeferredUpdate() {
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);
 
-		pointGbufferUpdatedShader.enable();
-		modelMatrix = glm::scale(glm::vec3(1.0f));
-		pointGbufferUpdatedShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferUpdatedShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferUpdatedShader.uniform("projMatrix", projMatrix);
-		pointGbufferUpdatedShader.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
 
-		pointGbufferUpdatedShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferUpdatedShader.uniform("glPointSize", glPointSizeFloat);
-		pointGbufferUpdatedShader.uniform("cameraPos", glm::vec3(cam.position));
-		pointGbufferUpdatedShader.uniform("renderPass", 0);
-		pointGbufferUpdatedShader.uniform("clearColor", clearColor);
+		//This VS: MVP, set pointsize based on perspective, manual backface cull with NoV
+		//This FS: Discard after radius, Write depth+epsillon manually in all 4 Buffers (using parabolla depth), No DepthTest yet!
+		// ---> DEPTH Test is ENABLED! we set "gl_FragDepth = newDepth;" manually, but this will still affect future Depth tests
+		// ---> We do make use of automatic depth test after all! But with our custom Depths!
+
+		shader_Splat_DepthWithEpsillon.enable();
+		modelMatrix = glm::scale(glm::vec3(1.0f));
+		shader_Splat_DepthWithEpsillon.uniform("modelMatrix", modelMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("viewMatrix", viewMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("projMatrix", projMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
+
+		shader_Splat_DepthWithEpsillon.uniform("viewPoint", glm::vec3(cam.position));
+		shader_Splat_DepthWithEpsillon.uniform("glPointSize", glPointSizeFloat);
+		shader_Splat_DepthWithEpsillon.uniform("cameraPos", glm::vec3(cam.position));
+		shader_Splat_DepthWithEpsillon.uniform("renderPass", 0); //unused
+		shader_Splat_DepthWithEpsillon.uniform("clearColor", clearColor); //unused
 
 		octree->drawPointCloud();
-		pointGbufferUpdatedShader.disable();
+		shader_Splat_DepthWithEpsillon.disable();
 		glDisable(GL_POINT_SPRITE);
 		glDisable(GL_PROGRAM_POINT_SIZE);
 
@@ -1371,32 +1378,39 @@ void standardSceneDeferredUpdate() {
 		//glDisable(GL_BLEND);
 		//glBlendFunc(GL_SOURCE0_ALPHA, GL_ONE);
 
-		pointGbufferUpdated2ndPassShader.enable();
+		//This VS:	MVP, set pointsize based on perspective, manual backface cull with NoV (essentially = shader_Splat_DepthWithEpsillon!!!)
+		//This FS:	Manual Depth Test
+		//			Get old Depth + current depth (calculated)
+		//			Do fuzzy Blending (ADDITIVE BLENDING)
+		//			Output color (premultiplied blending alpha) (+ 4x depth unused)
+		// ---> We MANUALLY Depth Test here! Against the previous Depth!
+
+		shader_Splat_Fuzzy.enable();
 		modelMatrix = glm::mat4(1.0f);
-		pointGbufferUpdated2ndPassShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("projMatrix", projMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
-		pointGbufferUpdated2ndPassShader.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
+		shader_Splat_Fuzzy.uniform("modelMatrix", modelMatrix);
+		shader_Splat_Fuzzy.uniform("viewMatrix", viewMatrix);
+		shader_Splat_Fuzzy.uniform("projMatrix", projMatrix);
+		shader_Splat_Fuzzy.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+		shader_Splat_Fuzzy.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
 
-		pointGbufferUpdated2ndPassShader.uniform("width", resolution.x);
-		pointGbufferUpdated2ndPassShader.uniform("height", resolution.y);
+		shader_Splat_Fuzzy.uniform("width", resolution.x);
+		shader_Splat_Fuzzy.uniform("height", resolution.y);
 
-		pointGbufferUpdated2ndPassShader.uniform("nearPlane", 1.0f);
-		pointGbufferUpdated2ndPassShader.uniform("farPlane", 500.0f);
-		pointGbufferUpdated2ndPassShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferUpdated2ndPassShader.uniform("glPointSize", glPointSizeFloat);
-		pointGbufferUpdated2ndPassShader.uniform("renderPass", 1);
-		pointGbufferUpdated2ndPassShader.uniform("clearColor", clearColor);
+		shader_Splat_Fuzzy.uniform("nearPlane", 1.0f); //unused, we store in a linear color buffer instead of calculating the depth!
+		shader_Splat_Fuzzy.uniform("farPlane", 500.0f); //unused, we store in a linear color buffer instead of calculating the depth!
+		shader_Splat_Fuzzy.uniform("viewPoint", glm::vec3(cam.position));
+		shader_Splat_Fuzzy.uniform("glPointSize", glPointSizeFloat);
+		shader_Splat_Fuzzy.uniform("renderPass", 1); //unused
+		shader_Splat_Fuzzy.uniform("clearColor", clearColor); //unused
 
-		fbo->bindTexture(0, 0);
-		pointGbufferUpdated2ndPassShader.uniform("texDepth", 0);
+		fbo->bindTexture(0, 0); //we use the linear color-buffer depth as input! No linearization of actual depth necessary!
+		shader_Splat_Fuzzy.uniform("texDepth", 0);
 		glActiveTexture(GL_TEXTURE1);
 		filter->Bind();
-		pointGbufferUpdated2ndPassShader.uniform("filter_kernel", 1);
+		shader_Splat_Fuzzy.uniform("filter_kernel", 1); //this is no FILTER and no KERNEL, thats just a gauss gradient!
 
 		octree->drawPointCloud();
-		pointGbufferUpdated2ndPassShader.disable();
+		shader_Splat_Fuzzy.disable();
 		glDisable(GL_POINT_SPRITE);
 		glDisable(GL_PROGRAM_POINT_SIZE);
 
@@ -1414,31 +1428,36 @@ void standardSceneDeferredUpdate() {
 	glDisable(GL_BLEND);
 
 	glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
-	pointDeferredUpdatedShader.enable();
+
+
+	//This VS:	Screen-Sited Quad
+	//This FS:	Manual Depth Test
+
+	shader_DrawOnscreenQuad.enable();
 	glActiveTexture(GL_TEXTURE0);
 	fbo2->bindTexture(0, 0);
-	pointDeferredUpdatedShader.uniform("texColor", 0);
+	shader_DrawOnscreenQuad.uniform("texColor", 0);
 	glActiveTexture(GL_TEXTURE1);
 	fbo2->bindTexture(1, 1);
-	pointDeferredUpdatedShader.uniform("texNormal", 1);
+	shader_DrawOnscreenQuad.uniform("texNormal", 1);
 	glActiveTexture(GL_TEXTURE2);
 	fbo2->bindTexture(2, 2);
-	pointDeferredUpdatedShader.uniform("texPosition", 2);
+	shader_DrawOnscreenQuad.uniform("texPosition", 2);
 	glActiveTexture(GL_TEXTURE3);
 	fbo2->bindDepth(3);
-	pointDeferredUpdatedShader.uniform("texDepth", 3);
+	shader_DrawOnscreenQuad.uniform("texDepth", 3);
 
 	glActiveTexture(GL_TEXTURE4);
 	filter->Bind();
-	pointDeferredUpdatedShader.uniform("filter_kernel", 4);
+	shader_DrawOnscreenQuad.uniform("filter_kernel", 4);
 
 	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
-	pointDeferredUpdatedShader.uniform("lightVecV", glm::vec3(lightPosView));
+	shader_DrawOnscreenQuad.uniform("lightVecV", glm::vec3(lightPosView));
 	quad->draw();
-	pointDeferredUpdatedShader.disable();
+	shader_DrawOnscreenQuad.disable();
 }
 
-void standardSceneDeferredUpdateCull() {
+void render_fuzzy_test() {
 	if (setViewFrustrum) {
 	}
 	else {
@@ -1470,22 +1489,22 @@ void standardSceneDeferredUpdateCull() {
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);
 
-		pointGbufferUpdatedShader.enable();
+		shader_Splat_DepthWithEpsillon.enable();
 		modelMatrix = glm::scale(glm::vec3(1.0f));
-		pointGbufferUpdatedShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferUpdatedShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferUpdatedShader.uniform("projMatrix", projMatrix);
-		pointGbufferUpdatedShader.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
+		shader_Splat_DepthWithEpsillon.uniform("modelMatrix", modelMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("viewMatrix", viewMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("projMatrix", projMatrix);
+		shader_Splat_DepthWithEpsillon.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
 
-		pointGbufferUpdatedShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferUpdatedShader.uniform("glPointSize", glPointSizeFloat);
-		pointGbufferUpdatedShader.uniform("cameraPos", glm::vec3(cam.position));
-		pointGbufferUpdatedShader.uniform("renderPass", 0);
-		pointGbufferUpdatedShader.uniform("clearColor", clearColor);
+		shader_Splat_DepthWithEpsillon.uniform("viewPoint", glm::vec3(cam.position));
+		shader_Splat_DepthWithEpsillon.uniform("glPointSize", glPointSizeFloat);
+		shader_Splat_DepthWithEpsillon.uniform("cameraPos", glm::vec3(cam.position));
+		shader_Splat_DepthWithEpsillon.uniform("renderPass", 0);
+		shader_Splat_DepthWithEpsillon.uniform("clearColor", clearColor);
 
 		octree->drawPointCloudInFrustrumPrep(octree->root, *viewfrustrum);
 
-		pointGbufferUpdatedShader.disable();
+		shader_Splat_DepthWithEpsillon.disable();
 		glDisable(GL_POINT_SPRITE);
 		glDisable(GL_PROGRAM_POINT_SIZE);
 
@@ -1511,32 +1530,32 @@ void standardSceneDeferredUpdateCull() {
 		//glDisable(GL_BLEND);
 		//glBlendFunc(GL_SOURCE0_ALPHA, GL_ONE);
 
-		pointGbufferUpdated2ndPassShader.enable();
+		shader_Splat_Fuzzy.enable();
 		modelMatrix = glm::mat4(1.0f);
-		pointGbufferUpdated2ndPassShader.uniform("modelMatrix", modelMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("viewMatrix", viewMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("projMatrix", projMatrix);
-		pointGbufferUpdated2ndPassShader.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
-		pointGbufferUpdated2ndPassShader.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
+		shader_Splat_Fuzzy.uniform("modelMatrix", modelMatrix);
+		shader_Splat_Fuzzy.uniform("viewMatrix", viewMatrix);
+		shader_Splat_Fuzzy.uniform("projMatrix", projMatrix);
+		shader_Splat_Fuzzy.uniform("col", glm::vec3(0.0f, 1.0f, 0.0f));
+		shader_Splat_Fuzzy.uniform("depthEpsilonOffset", depthEpsilonOffset + 0.001f);
 
-		pointGbufferUpdated2ndPassShader.uniform("width", resolution.x);
-		pointGbufferUpdated2ndPassShader.uniform("height", resolution.y);
+		shader_Splat_Fuzzy.uniform("width", resolution.x);
+		shader_Splat_Fuzzy.uniform("height", resolution.y);
 
-		pointGbufferUpdated2ndPassShader.uniform("nearPlane", 1.0f);
-		pointGbufferUpdated2ndPassShader.uniform("farPlane", 500.0f);
-		pointGbufferUpdated2ndPassShader.uniform("viewPoint", glm::vec3(cam.position));
-		pointGbufferUpdated2ndPassShader.uniform("glPointSize", glPointSizeFloat);
-		pointGbufferUpdated2ndPassShader.uniform("renderPass", 1);
-		pointGbufferUpdated2ndPassShader.uniform("clearColor", clearColor);
+		shader_Splat_Fuzzy.uniform("nearPlane", 1.0f);
+		shader_Splat_Fuzzy.uniform("farPlane", 500.0f);
+		shader_Splat_Fuzzy.uniform("viewPoint", glm::vec3(cam.position));
+		shader_Splat_Fuzzy.uniform("glPointSize", glPointSizeFloat);
+		shader_Splat_Fuzzy.uniform("renderPass", 1);
+		shader_Splat_Fuzzy.uniform("clearColor", clearColor);
 
 		fbo->bindTexture(0, 0);
-		pointGbufferUpdated2ndPassShader.uniform("texDepth", 0);
+		shader_Splat_Fuzzy.uniform("texDepth", 0);
 		glActiveTexture(GL_TEXTURE1);
 		filter->Bind();
-		pointGbufferUpdated2ndPassShader.uniform("filter_kernel", 1);
+		shader_Splat_Fuzzy.uniform("filter_kernel", 1);
 
 		octree->drawPointCloudInFrustrumPrep(octree->root, *viewfrustrum);
-		pointGbufferUpdated2ndPassShader.disable();
+		shader_Splat_Fuzzy.disable();
 		glDisable(GL_POINT_SPRITE);
 		glDisable(GL_PROGRAM_POINT_SIZE);
 
@@ -1554,31 +1573,31 @@ void standardSceneDeferredUpdateCull() {
 	glDisable(GL_BLEND);
 
 	glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
-	pointDeferredUpdatedShader.enable();
+	shader_DrawOnscreenQuad.enable();
 	glActiveTexture(GL_TEXTURE0);
 	fbo2->bindTexture(0, 0);
-	pointDeferredUpdatedShader.uniform("texColor", 0);
+	shader_DrawOnscreenQuad.uniform("texColor", 0);
 	glActiveTexture(GL_TEXTURE1);
 	fbo2->bindTexture(1, 1);
-	pointDeferredUpdatedShader.uniform("texNormal", 1);
+	shader_DrawOnscreenQuad.uniform("texNormal", 1);
 	glActiveTexture(GL_TEXTURE2);
 	fbo2->bindTexture(2, 2);
-	pointDeferredUpdatedShader.uniform("texPosition", 2);
+	shader_DrawOnscreenQuad.uniform("texPosition", 2);
 	glActiveTexture(GL_TEXTURE3);
 	fbo2->bindDepth(3);
-	pointDeferredUpdatedShader.uniform("texDepth", 3);
+	shader_DrawOnscreenQuad.uniform("texDepth", 3);
 
 	glActiveTexture(GL_TEXTURE4);
 	filter->Bind();
-	pointDeferredUpdatedShader.uniform("filter_kernel", 4);
+	shader_DrawOnscreenQuad.uniform("filter_kernel", 4);
 
 	glm::vec4 lightPosView = viewMatrix * glm::vec4(lightPos, 0.0);
-	pointDeferredUpdatedShader.uniform("lightVecV", glm::vec3(lightPosView));
+	shader_DrawOnscreenQuad.uniform("lightVecV", glm::vec3(lightPosView));
 	quad->draw();
-	pointDeferredUpdatedShader.disable();
+	shader_DrawOnscreenQuad.disable();
 }
 
-void kernelScene(){
+void render_KernelTexture(){
 	//Debug Render Filter
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
@@ -1610,26 +1629,26 @@ void display() {
 	}
 
 	switch (m_currenRender) {
-	case SIMPLE:
-		standardScene();
+	case MODE_FUZZY_WORKS:
+		render_fuzzy_works(); //Fuzzy splatting with blur filter to blend more smoothly (why does this currently even work!?)
+		break;
+	case MODE_FUZZY_TEST:
+		render_fuzzy_test(); //Pure fuzzy splatting (WIP! currently broken!)
+		break;
+	case MODE_VORONOI_WITHBORDERS:
+		render_Voronoi_withBorders(); //depth based voroni splats (with border for visualization)
 		break;
 	case DEBUG:
-		standardSceneFBO();
+		render_Debug(); //show debug Buffers
 		break;
-	case DEFERRED:
-		standardSceneDeferred();
+	case MODE_ADDITIVE:
+		render_Additive(); //failed experiment to blend with using just one FBO
 		break;
-	case DEFERRED_UPDATE:
-		standardSceneDeferredUpdate();
+	case MODE_GIT_TRIANGLE:
+		render_GIT_triangles(); //some approach from git, not working
 		break;
-	case CULL_DEFERRED:
-		standardSceneDeferredUpdateCull();
-		break;
-	case TRIANGLE:
-		splattingGITscene();
-		break;
-	case KERNEL:
-		kernelScene();
+	case MODE_SHOW_KERNEL_TEXTURE:
+		render_KernelTexture(); //preview texture
 		break;
 	};
 

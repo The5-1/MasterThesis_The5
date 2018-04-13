@@ -25,6 +25,12 @@ out float beta;
 #define COORDINATE_GRID_TYPE -1 //0 = model // 1=world // 2=view //3=perspective
 
 void main() {
+
+	/* 1.) write vertex position as usual with MVP Transform
+	** 2.) set gl_PointSize based on distance to camera
+	** 3.) backface cull manually by testing NoV (gl_point does not have automatic culling!)
+	*/
+
 	//Normal
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
 	viewNormal =  normalMatrix * vec4(vNormal, 0.0); //homogenous coordinate = 0 for vectors
@@ -33,12 +39,14 @@ void main() {
 	color = vColor;
 
 	//Position	
-	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
 	positionFBO = modelMatrix * vec4(vPosition, 1.0);
-	gl_Position = projMatrix * viewPosition;
+	viewPosition = viewMatrix * positionFBO;
+	vec4 posPersp = projMatrix * viewPosition;
 
 	//Size (Constant size, selfmade)
-	gl_PointSize = glPointSize * (1.0 - gl_Position.z / gl_Position.w);
+	gl_PointSize = glPointSize * (1.0 - posPersp.z / posPersp.w); //set point size and scale down with distance to camrea
+
+	gl_Position = posPersp;
 
 	//High-Quality Point-Based Rendering on Modern GPUs (Seite 3)
 	//float distanceCam = length( - viewPosition.xyz ); //Does not need to be divided by w! w = 1 (Viewtrafo, is only rotation/Translation)
@@ -60,11 +68,13 @@ void main() {
 	/* ******************************************************************
 	Backface-Culling (gl_points dont have an implemented backface-cull)
 	****************************************************************** */
-	#ifdef BACKFACE_CULLING
+#ifdef BACKFACE_CULLING
+
 	vec3 viewDirection = viewPoint - vPosition;
+
 	if(dot(viewDirection, vNormal) < 0 ){
-		gl_Position.w = 0.0;
+		gl_Position.w = 0.0; //hack: to "discard" a vertex, force a perspective divide by zero
 	}
-	#endif	
+#endif	
 }
 

@@ -28,6 +28,13 @@ void main(){
 	//outPos = vec4(positionFBO.xyz/positionFBO.w, 1.0);
 	//outNormal = vec4( vec3(texture(texDepth, 0.5 * gl_FragCoord.xy +0.5).r) , 1.0);
 	//outPos = vec4( vec3(texture(texDepth, gl_FragCoord.xy).r), 1.0);
+	ivec2 fDepthOld_res = textureSize(texDepth,0);
+	vec2 texelSize = 1.0/vec2(fDepthOld_res);
+
+	vec2 fScreenUV = vec2(gl_FragCoord.x, gl_FragCoord.y)*texelSize;
+
+	float fDepthOld = texture(texDepth,fScreenUV).x;
+
 
 	#ifdef AFFINE_PROJECTED
 		vec2 circCoord = 2.0 * gl_PointCoord - vec2(1.0, 1.0); //Maps to [-1, 1]
@@ -72,18 +79,36 @@ void main(){
 		outColor.b =  10.0 * (depthBuffer - newDepth);
 		//outColor.w = (depthBuffer - newDepth) * 10.0;
 
+		//float depth_new = gl_FragCoord.z+ (pow(currentRadius, 2)) * gl_FragCoord.w;
+
+
+
 		float depth_new = gl_FragCoord.z+ (pow(currentRadius, 2)) * gl_FragCoord.w;
 
 		float depth_old = texture(texDepth, vec2(gl_FragCoord.x/width, gl_FragCoord.y/height)).r; //Look up previous -epsillon depth by using the pixel cooridnates directly for lookup
 
+		if(depth_new > depth_old){
+			discard;
+		}
+
+
+		//weight is the distance between old and new depth in proportion to epsillon so [0,1]
 		float weight = (depth_old - depth_new)/(depthEpsilonOffset); //when the distance is epsillon, this should be 1.0, when it is smaller, this should be <1.0
 		
-		outColor = vec4(color*weight, weight);
+		//The colors are blended ADDITIVELY, Buffer is 32bit --> numbers > 1 allowed!!!
+		outColor = vec4(color*weight, weight); 
 
 		outDepth = vec4(vec3(depthBuffer), 1.0);;
 		outNormal = vec4(vec3(depthBuffer), 1.0);
 		outPos= vec4(vec3(newDepth), 1.0);
 
-		gl_FragDepth = newDepth; 
+		//gl_FragDepth = newDepth; //we manually depth test and discard! //Depth Test is disabled for this renderpass
+
+/*
+		outColor = vec4(0.0);
+		outColor.rg = fScreenUV;
+		outColor = vec4(fDepthOld);
+		outColor.a = 1.0;
+		*/
 	#endif
 }
