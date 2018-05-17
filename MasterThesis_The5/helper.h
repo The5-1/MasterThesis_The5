@@ -12,8 +12,8 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define WIDTH 1024
-#define HEIGHT 768
+#define WIDTH 1800
+#define HEIGHT 1000
 
 //https://blog.nobel-joergensen.com/2013/01/29/debugging-opengl-using-glgeterror/
 //https://stackoverflow.com/a/3048361

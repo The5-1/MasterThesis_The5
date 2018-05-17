@@ -35,7 +35,12 @@ void main() {
 	//mat3 normalMatrix = inverse(transpose(mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz)));
 	//viewNormal =  vec4(normalize(normalMatrix * vNormal), 1);
 
+	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
+
+	/*Colors*/
 	color = vColor;
+	//float NoL = abs(dot(vNormal,lightdir));
+	//color = vec3(0.33,0.33,1.0)*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
 		
 	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
 	
@@ -44,11 +49,17 @@ void main() {
 
 	//gl_PointSize = 15.0f;//*(1.0-viewPosition.z);
 	positionFBO = modelMatrix * vec4(vPosition, 1.0);
-	gl_Position = projMatrix * viewPosition;
+	vec4 pos = projMatrix * viewPosition;
+	gl_Position = pos;
 	
 	//Constant point size
-	//gl_PointSize = 500.0f * vRadius * (1.0-gl_Position.z/gl_Position.w);
 	gl_PointSize = glPointSize * (1.0 - gl_Position.z/gl_Position.w);
+	//gl_PointSize = glPointSize;
+
+	//float width = 0.8;
+	//gl_PointSize = glPointSize * (1.0 - gl_Position.z/gl_Position.w)*clamp((vPosition.x+width-0.5)/(2.0),0.0,1.0)+3.0;
+
+
 	//View-Dependant point size
 	//gl_PointSize = 50.0f;
 

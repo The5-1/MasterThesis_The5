@@ -19,9 +19,13 @@ uniform vec3 col;
 } vertexOut;
 
 void main() {
+	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
+	float NoL = abs(dot(vNormal,lightdir));
+	vec3 c = vec3(0.33,0.33,1.0)*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
+
 	gl_Position = vec4(vPosition, 1.0);
 
-	//vertexOut.color = col;
+	vertexOut.color = c;
 	vertexOut.color = vColor;
 	
 	vertexOut.normal = normalize(vNormal);

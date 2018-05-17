@@ -26,6 +26,14 @@ in vec3 lightVecV;
 //Lighting
 //#define PHONG 0
 
+const float NEAR = 0.8;
+const float FAR = 1.1;
+
+float linearize(float depth)
+{
+	return (depth-NEAR)/(FAR-NEAR);
+}
+
 void main(){ 
 	/* ******************************************************************
 	Fill FBO
@@ -40,22 +48,24 @@ void main(){
 	****************************************************************** */
 	#ifdef SIMPLE_POINT
 		vec2 circCoord0 = gl_PointCoord;
-		float alpha = min(1.0,(1.0-length(circCoord0*2.0-1.0))*4.0);
-		outColor = vec4(color,1.0);
-		
-		if(alpha <= 0.0)
+		float alpha = length(circCoord0*2.0-1.0);
+
+		float newDepth = gl_FragCoord.z + (pow(alpha, 1.0)) * gl_FragCoord.w ;
+		vec3 depth = vec3(linearize(newDepth));
+
+		//outColor = vec4(depth,1.0);
+		outColor = vec4(color, 1.0);
+
+		if(alpha >= 1.0)
 		{
 			discard;
 		}
-		else if(alpha < 0.2)
-		{
-			outColor = vec4(0.0, 0.0, 0.0, 1.0);
+	
+		//gl_FragDepth = newDepth; 
+		if(depthToPosTexture){
+			outPos = vec4(vec3( newDepth), 1.0);
 		}
 		
-
-		
-		//outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
-		//outColor = vec4(alpha, 1);
 	#endif
 
 	/* ******************************************************************
@@ -69,20 +79,16 @@ void main(){
 
 		float maxRadius = 1.0;
 		float currentRadius = length( vec3(circCoord.x, circCoord.y, delta_z) );
+		float newDepth = gl_FragCoord.z + (pow(currentRadius, 1.0)) * gl_FragCoord.w ;
+		vec3 depthColor = vec3(newDepth);
+
 		if(currentRadius > maxRadius)
 		{
 			//outColor = abs(vec4(1.0, 0.0, 0.0, 1.0));
 			discard;
 		}
-		else if(currentRadius >= 0.9 * maxRadius)
-		{
-			outColor = vec4(0.0, 0.0, 0.0, 1.0);
-
-			#ifdef PHONG
-			outColor = vec4(0.0, 0.0, 0.0, 1.0) * vec4(vec3(pow(max(0.0,dot(viewNormal.xyz, lightVecV)),4.0)),1.0);
-			#endif
-		}
 		else{
+			//outColor = vec4(depthColor, 1.0);
 			outColor = vec4(color, 1.0);
 
 			#ifdef PHONG
@@ -93,9 +99,9 @@ void main(){
 		
 
 		//Update depth
-		gl_FragDepth = gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w ; 
+		//gl_FragDepth = newDepth; 
 		if(depthToPosTexture){
-			outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) * gl_FragCoord.w  ), 1.0);
+			outPos = vec4(vec3( newDepth), 1.0);
 			//outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) ), 1.0);
 		}
 	#endif

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <GL/glew.h>
 #include <GL/glut.h>
+#include <GL/wglew.h>
 #include <Ant/AntTweakBar.h>
 #include <memory>
 #include <algorithm>
@@ -27,6 +28,9 @@
 #include "PC_Octree.h"
 #include "ObjToPcd.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 //#include <glm/gtc/matrix_transform.hpp>
 //glm::mat4 test = glm::frustum
 
@@ -40,7 +44,9 @@ long timeCounter, timebase;
 char timeString[50];
 
 //Resolution (has to be changed in helper.h too)
-glm::vec2 resolution = glm::vec2(1024.0f, 768.0f);
+glm::vec2 resolution = glm::vec2(1800.0f, 1000.0f);
+//glm::vec2 resolution = glm::vec2(1024.0f, 768.0f);
+
 
 //Externals
 //cameraSystem cam(1.0f, 1.0f, glm::vec3(20.95f, 20.95f, -0.6f));
@@ -119,6 +125,7 @@ float glPointSizeFloat = 400.0f;
 float depthEpsilonOffset = 0.05f;
 typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 typedef enum { MODE_FUZZY_WORKS, MODE_VORONOI_WITHBORDERS, DEBUG, MODE_ADDITIVE, MODE_GIT_TRIANGLE, MODE_SHOW_KERNEL_TEXTURE, MODE_FUZZY_TEST} RENDER_TYPE; RENDER_TYPE m_currenRender = MODE_FUZZY_WORKS;
+bool screenshot = false;
 
 /* *********************************************************************************************************
 Helper Function
@@ -178,6 +185,7 @@ void setupTweakBar() {
 	tweakBar = TwNewBar("Settings");
 
 	TwAddSeparator(tweakBar, "Splat Draw", nullptr);
+	TwAddVarRW(tweakBar, "Screenshot", TW_TYPE_BOOLCPP, &screenshot, " label='Screenshot' ");
 	TwEnumVal Splats[] = { { QUAD_SPLATS, "QUAD_SPLATS" },{ POINTS_GL, "POINTS_GL" } };
 	TwType SplatsTwType = TwDefineEnum("MeshType", Splats, 2);
 	TwAddVarRW(tweakBar, "Splats", SplatsTwType, &m_currenSplatDraw, NULL);
@@ -368,9 +376,9 @@ void init() {
 	//octree = new PC_Octree(bigVertices, bigNormals, bigRadii, 10);
 
 	/*************
-	***NanoSuit
+	***NanoSuit //loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
 	**************/
-	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/Nanosuit ply/nanosuit_butterfly2.ply");
 	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
 
 	/*************
@@ -448,7 +456,7 @@ void loadShader(bool init) {
 	//Updated
 	shader_Splat_DepthWithEpsillon = Shader("./shader/PointGbuffer/pointGbufferUpdated.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated.fs.glsl");
 	shader_Splat_Fuzzy = Shader("./shader/PointGbuffer/pointGbufferUpdated2ndPass.vs.glsl", "./shader/PointGbuffer/pointGbufferUpdated2ndPass.fs.glsl");
-	
+
 	shader_DrawOnscreenQuad = Shader("./shader/PointGbuffer/pointDeferredUpdated.vs.glsl", "./shader/PointGbuffer/pointDeferredUpdated.fs.glsl");
 
 
@@ -478,7 +486,7 @@ void render_Voronoi_withBorders() {
 	//Clear
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(0.3f, 0.3f, 0.3f, 1);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	/* ********************************************
 	modelMatrix
@@ -545,7 +553,7 @@ void render_Voronoi_withBorders() {
 	**********************************************/
 	if (backfaceCull) {
 		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
+		glCullFace(GL_BACK);
 	}
 	else {
 		glDisable(GL_CULL_FACE);
@@ -572,6 +580,12 @@ void render_Voronoi_withBorders() {
 		simpleSplatShader.uniform("filter_kernel", 0);
 
 		octree->drawPointCloud();
+		for (int i = 0; i < 15; i++) {
+				modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
+				simpleSplatShader.uniform("modelMatrix", modelMatrix);
+				octree->drawPointCloud();
+		}
+
 		simpleSplatShader.disable();
 		break;
 	case(POINTS_GL):
@@ -595,11 +609,12 @@ void render_Voronoi_withBorders() {
 		pointShader.uniform("glPointSize", glPointSizeFloat);
 		pointShader.uniform("depthToPosTexture", false);
 
-		clock_t begin = clock();
 		octree->drawPointCloud();
-		clock_t end = clock();
-		double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-		//std::cout << "Runtime: " << elapsed_secs << std::endl;
+		for (int i = 0; i < 15; i++) {
+			modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
+			pointShader.uniform("modelMatrix", modelMatrix);
+			octree->drawPointCloud();
+		}
 
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);
@@ -1455,6 +1470,50 @@ void render_fuzzy_works() {
 	shader_DrawOnscreenQuad.uniform("lightVecV", glm::vec3(lightPosView));
 	quad->draw();
 	shader_DrawOnscreenQuad.disable();
+
+
+	//if (screenshot) {
+	//	screenshot = false;
+	//	/*
+	//	https://www.gamedev.net/forums/topic/436385-how-to-save-a-screenshot-in-opengl/
+	//	*/
+	//	const int width = WIDTH;
+	//	const int height = HEIGHT;
+
+	//	const size_t bytesPerPixel = 3;	// RGB
+	//	const size_t imageSizeInBytes = bytesPerPixel * size_t(width) * size_t(height);
+
+	//	// Allocate with malloc, because the data will be managed by wxImage
+	//	BYTE* pixels = static_cast<BYTE*>(malloc(imageSizeInBytes));
+
+	//	// glReadPixels takes the lower-left corner, while GetViewportOffset gets the top left corner
+	//	GLint m_viewport[4];
+	//	glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+	//	// glReadPixels can align the first pixel in each row at 1-, 2-, 4- and 8-byte boundaries. We
+	//	// have allocated the exact size needed for the image so we have to use 1-byte alignment
+	//	// (otherwise glReadPixels would write out of bounds)
+	//	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	//	glReadPixels(m_viewport[0], m_viewport[1], width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels); //Only works on FBO's
+
+	//																								 // glReadPixels reads the given rectangle from bottom-left to top-right, so we must
+	//																								 // reverse it
+	//	for (int y = 0; y < height / 2; y++)
+	//	{
+	//		const int swapY = height - y - 1;
+	//		for (int x = 0; x < width; x++)
+	//		{
+	//			const int offset = int(bytesPerPixel) * (x + y * width);
+	//			const int swapOffset = int(bytesPerPixel) * (x + swapY * width);
+
+	//			// Swap R, G and B of the 2 pixels
+	//			std::swap(pixels[offset + 0], pixels[swapOffset + 0]);
+	//			std::swap(pixels[offset + 1], pixels[swapOffset + 1]);
+	//			std::swap(pixels[offset + 2], pixels[swapOffset + 2]);
+	//		}
+	//	}
+	//	stbi_write_png("screenshot.png", WIDTH, HEIGHT, 3, pixels, 0);
+	//}
 }
 
 void render_fuzzy_test() {
@@ -1652,6 +1711,49 @@ void display() {
 		break;
 	};
 
+	if (screenshot) {
+		screenshot = false;
+		/*
+		https://www.gamedev.net/forums/topic/436385-how-to-save-a-screenshot-in-opengl/
+		*/
+		const int width = WIDTH;
+		const int height = HEIGHT;
+
+		const size_t bytesPerPixel = 3;	// RGB
+		const size_t imageSizeInBytes = bytesPerPixel * size_t(width) * size_t(height);
+
+		// Allocate with malloc, because the data will be managed by wxImage
+		BYTE* pixels = static_cast<BYTE*>(malloc(imageSizeInBytes));
+
+		// glReadPixels takes the lower-left corner, while GetViewportOffset gets the top left corner
+		GLint m_viewport[4];
+		glGetIntegerv(GL_VIEWPORT, m_viewport);
+
+		// glReadPixels can align the first pixel in each row at 1-, 2-, 4- and 8-byte boundaries. We
+		// have allocated the exact size needed for the image so we have to use 1-byte alignment
+		// (otherwise glReadPixels would write out of bounds)
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(m_viewport[0], m_viewport[1], width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels); //Only works on FBO's
+
+																									 // glReadPixels reads the given rectangle from bottom-left to top-right, so we must
+																									 // reverse it
+		for (int y = 0; y < height / 2; y++)
+		{
+			const int swapY = height - y - 1;
+			for (int x = 0; x < width; x++)
+			{
+				const int offset = int(bytesPerPixel) * (x + y * width);
+				const int swapOffset = int(bytesPerPixel) * (x + swapY * width);
+
+				// Swap R, G and B of the 2 pixels
+				std::swap(pixels[offset + 0], pixels[swapOffset + 0]);
+				std::swap(pixels[offset + 1], pixels[swapOffset + 1]);
+				std::swap(pixels[offset + 2], pixels[swapOffset + 2]);
+			}
+		}
+		stbi_write_png("screenshot.png", WIDTH, HEIGHT, 3, pixels, 0);
+	}
+
 	TwDraw(); //Draw Tweak-Bar
 
 	glutSwapBuffers();
@@ -1675,6 +1777,9 @@ int main(int argc, char** argv) {
 	if (GLEW_OK != err) {
 		std::cerr << "Error : " << glewGetErrorString(err) << std::endl;
 	}
+
+	//Disable Vsync, requires #include <GL/wglew.h>
+	//wglSwapIntervalEXT(0);
 
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);

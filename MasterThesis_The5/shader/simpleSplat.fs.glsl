@@ -18,10 +18,18 @@ void main()
 	// tex coords from -1.0 to 1.0
 	
 	//Possible Outputs
-	//**************** 1 **************** Circle:
-	float radius = pow(FragmentIn.texcoord.x, 2.0) + pow( FragmentIn.texcoord.y, 2.0);
-	if ((radius > 1.0)){ 
-	discard;
+	//**************** 1 ****************:
+	//Quads (use this if geometry shader produces Quads)
+	//float radius = pow(FragmentIn.texcoord.x, 2.0) + pow( FragmentIn.texcoord.y, 2.0);
+	//if ((radius > 1.0)){ 
+	//discard;
+	//}
+	
+	
+	//Triangles (use this if geometry shader produces Triangles)
+	float radius = pow(FragmentIn.texcoord.x + 0.5, 2.0) + pow( FragmentIn.texcoord.y - 0.5, 2.0);
+	if ((radius > 0.25)){ 
+		discard;
 	}
 
 	out0 = vec4(FragmentIn.color, 1.0);
