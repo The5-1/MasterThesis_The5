@@ -18,8 +18,8 @@ in vec4 positionFBO;
 in vec3 lightVecV;
 
 //Render type (only 1 may be active!!)
-//#define SIMPLE_POINT 0
-#define AFFINE_PROJECTED 0
+#define SIMPLE_POINT 0
+//#define AFFINE_PROJECTED 0
 //#define POTREE 0
 
 
@@ -99,7 +99,7 @@ void main(){
 		
 
 		//Update depth
-		//gl_FragDepth = newDepth; 
+		gl_FragDepth = newDepth; 
 		if(depthToPosTexture){
 			outPos = vec4(vec3( newDepth), 1.0);
 			//outPos = vec4(vec3( gl_FragCoord.z + (pow(currentRadius, 2.0)) ), 1.0);

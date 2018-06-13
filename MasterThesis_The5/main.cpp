@@ -121,7 +121,7 @@ bool debugView = true;
 bool useGaussFilter = false;
 int filterPasses = 5;
 glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
-float glPointSizeFloat = 400.0f;
+float glPointSizeFloat = 15.0f;
 float depthEpsilonOffset = 0.05f;
 typedef enum { QUAD_SPLATS, POINTS_GL } SPLAT_TYPE; SPLAT_TYPE m_currenSplatDraw = POINTS_GL;
 typedef enum { MODE_FUZZY_WORKS, MODE_VORONOI_WITHBORDERS, DEBUG, MODE_ADDITIVE, MODE_GIT_TRIANGLE, MODE_SHOW_KERNEL_TEXTURE, MODE_FUZZY_TEST} RENDER_TYPE; RENDER_TYPE m_currenRender = MODE_FUZZY_WORKS;
@@ -378,7 +378,21 @@ void init() {
 	/*************
 	***NanoSuit //loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
 	**************/
-	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/Nanosuit ply/nanosuit_butterfly2.ply");
+	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/Nanosuit ply/nanosuit_butterfly2.ply");
+	//octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
+
+
+	/*************
+	***Bunny //loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "C:/Dev/Assets/Nanosuit/nanosuit.ply");
+	**************/
+	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "D:/Dev/Assets/Pointcloud/Bunny.ply");
+	//loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "D:/Dev/Assets/Kuh/Punktwolke/Kuh_Punktwolke_withNormals_bitSmalerl.ply");
+	loadPolyFile(bigVertices, bigNormals, bigRadii, bigColors, "D:/Dev/Assets/Kuh/Punktwolke/Kuh_Punktwolke_withNormals.ply");
+
+
+	for (int i = 0; i < bigVertices.size(); i++) {
+		bigVertices[i] = bigVertices[i];
+	}
 	octree = new PC_Octree(bigVertices, bigNormals, bigColors, bigRadii, 10);
 
 	/*************
@@ -580,11 +594,11 @@ void render_Voronoi_withBorders() {
 		simpleSplatShader.uniform("filter_kernel", 0);
 
 		octree->drawPointCloud();
-		for (int i = 0; i < 15; i++) {
-				modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
-				simpleSplatShader.uniform("modelMatrix", modelMatrix);
-				octree->drawPointCloud();
-		}
+		//for (int i = 0; i < 15; i++) {
+		//		modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
+		//		simpleSplatShader.uniform("modelMatrix", modelMatrix);
+		//		octree->drawPointCloud();
+		//}
 
 		simpleSplatShader.disable();
 		break;
@@ -610,11 +624,11 @@ void render_Voronoi_withBorders() {
 		pointShader.uniform("depthToPosTexture", false);
 
 		octree->drawPointCloud();
-		for (int i = 0; i < 15; i++) {
-			modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
-			pointShader.uniform("modelMatrix", modelMatrix);
-			octree->drawPointCloud();
-		}
+		//for (int i = 0; i < 15; i++) {
+		//	modelMatrix = glm::translate(glm::vec3(float(i) * 2.0f, 0.0f, 0.0f));
+		//	pointShader.uniform("modelMatrix", modelMatrix);
+		//	octree->drawPointCloud();
+		//}
 
 		pointShader.disable();
 		glDisable(GL_POINT_SPRITE);

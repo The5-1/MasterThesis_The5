@@ -62,7 +62,7 @@ void main(){
 		outColor = dif / (dif.w); //get rid of the initial alpha of the clear color, if clearcolor is 0.0 we should be good
 
 		//outColor.rgb = LinearToSRGB(outColor.rgb * 10.0); //nanosuit is too dark, add *40.0 inside brackets! Make sure to turn on Gamma correction in this and the previous color shader!
-		outColor.rgb = LinearToSRGB(outColor.rgb);
+		outColor.rgb = outColor.rgb * 3.5;
 
 
 		outNormal = nor / nor.w;

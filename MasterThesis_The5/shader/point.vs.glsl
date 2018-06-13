@@ -27,6 +27,16 @@ out vec3 lightVecV;
 //#define PS_BASIC 0
 //#define PS_CONSTANT 0
 //#define PS_LION 0
+vec3 srgbToLinear(vec3 linear)
+{
+#if GAMMA_CORRECTION > 0
+	return pow(linear,vec3(2.2));
+#else
+	return linear;
+#endif
+}
+
+
 
 void main() {
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
@@ -38,7 +48,7 @@ void main() {
 	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
 
 	/*Colors*/
-	color = vColor;
+	color = srgbToLinear(vColor) * 1.05;
 	//float NoL = abs(dot(vNormal,lightdir));
 	//color = vec3(0.33,0.33,1.0)*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
 		

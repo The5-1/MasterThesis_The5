@@ -57,10 +57,10 @@ void main() {
 	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
 
 	//color = vColor*abs(vNormal);
-	float NoL = abs(dot(vNormal,lightdir));
-	vec3 farbe = vec3(0.33,0.33,1.0);
-	color = farbe*farbe*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
-	//color = srgbToLinear(vColor);
+	//float NoL = abs(dot(vNormal,lightdir));
+	//vec3 farbe = vec3(0.33,0.33,1.0);
+	//color = farbe*farbe*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
+	color = srgbToLinear(vColor) * 0.35;
 
 	//Position	
 	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
