@@ -500,7 +500,7 @@ void render_Voronoi_withBorders() {
 	//Clear
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 
 	/* ********************************************
 	modelMatrix
@@ -667,7 +667,7 @@ void render_Voronoi_withBorders() {
 		viewfrustrum->drawQuad();
 	}
 	else {
-		viewfrustrum->draw();
+		//viewfrustrum->draw();
 	}
 
 	basicColorShader.disable();

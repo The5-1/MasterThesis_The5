@@ -24,11 +24,12 @@ out vec3 coordinateGridPos;
 out vec3 color;
 out vec4 positionFBO;
 
+out float distToCamera;
 
 #define BACKFACE_CULLING 0
 
 
-#define GAMMA_CORRECTION 1
+#define GAMMA_CORRECTION 0
 
 vec3 LinearToSRGB(vec3 linear)
 {
@@ -53,14 +54,31 @@ void main() {
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
 	viewNormal =  normalMatrix * vec4(vNormal, 0.0); //homogenous coordinate = 0 for vectors
 
+	vec4 cs_position = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
+    distToCamera = -cs_position.z / 10.0;
+
 	//Color
-	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
+	//vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
+	//vec3 lightdir = normalize(vec3(1.0,0.0,0.0));
+	//vec3 lightdir = normalize(vec3(0.0,1.0,0.0));
 
 	//color = vColor*abs(vNormal);
+
 	//float NoL = abs(dot(vNormal,lightdir));
 	//vec3 farbe = vec3(0.33,0.33,1.0);
 	//color = farbe*farbe*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
-	color = srgbToLinear(vColor) * 0.35;
+
+	vec3 lightdir = normalize(vec3(1.0,2.0,-0.7));
+	float NoL = max(0.0,dot(vNormal,lightdir));
+	vec3 farbe = vColor.rgb;
+	color = farbe*farbe*(0.5+0.9*NoL);
+
+	color = srgbToLinear(color.rgb);
+
+
+
+
+	//color = srgbToLinear(vColor) * 0.35;
 
 	//Position	
 	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);

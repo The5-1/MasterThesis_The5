@@ -36,6 +36,14 @@ vec3 srgbToLinear(vec3 linear)
 #endif
 }
 
+vec3 phongLighting(vec3 color){
+	vec3 lightdir = normalize(vec3(1.0,2.0,-0.7));
+
+	float NoL = max(0.0,dot(vNormal,lightdir));
+	vec3 farbe = color;
+	return farbe*farbe*(0.15 + 0.25 * NoL);
+}
+
 
 
 void main() {
@@ -48,10 +56,17 @@ void main() {
 	vec3 lightdir = normalize(vec3(1.0,1.5,0.5));
 
 	/*Colors*/
-	color = srgbToLinear(vColor) * 1.05;
+	color = phongLighting(vColor.rgb) * 3.05;
+	//color = srgbToLinear(vColor) * 1.05;
+
 	//float NoL = abs(dot(vNormal,lightdir));
 	//color = vec3(0.33,0.33,1.0)*NoL + vec3(1.0)*pow(NoL,5.0)*0.25;
 		
+
+	//we do phong in the fragment shader (pointless, but consistent with mesh and fuzzy shaders)
+	color = vColor;
+
+
 	viewPosition = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
 	
 	lightVecV = (viewMatrix * vec4(normalize(lightPos - vPosition),0.0)).xyz; //for vectors homogenous coordinate = 0

@@ -18,7 +18,7 @@ uniform vec3 lightVecV;
 #define BLENDING 0
 #define DEPTH_DIFFERENCE 0
 
-#define GAMMA_CORRECTION 1
+#define GAMMA_CORRECTION 0
 
 vec3 LinearToSRGB(vec3 linear)
 {
@@ -60,14 +60,16 @@ void main(){
 
 	#ifdef BLENDING
 		outColor = dif / (dif.w); //get rid of the initial alpha of the clear color, if clearcolor is 0.0 we should be good
+		outColor.rgb = LinearToSRGB(outColor.rgb);
 
 		//outColor.rgb = LinearToSRGB(outColor.rgb * 10.0); //nanosuit is too dark, add *40.0 inside brackets! Make sure to turn on Gamma correction in this and the previous color shader!
-		outColor.rgb = outColor.rgb * 3.5;
-
-
-		outNormal = nor / nor.w;
-		outPos = pos / pos.w;
-		gl_FragDepth = texture2D(texDepth, tc).r;
+		//outColor.rgb = outColor.rgb * 3.5;
+		//outColor.rgb = dif.rgb * 3.5;
+//
+//
+		//outNormal = nor / nor.w;
+		//outPos = pos / pos.w;
+		//gl_FragDepth = texture2D(texDepth, tc).r;
 
 		/*
 		outColor = vec4(texture2D(texColor, tc).rgb, 1.0);

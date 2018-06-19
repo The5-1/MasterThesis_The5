@@ -19,6 +19,8 @@ in vec4 positionFBO;
 
 in vec3 coordinateGridPos;
 
+in float distToCamera;
+
 #define AFFINE_PROJECTED 0
 //#define GAUSS_ALPHA 0
 
@@ -93,13 +95,13 @@ void main(){
 
 
 		//weight is the distance between old and new depth in proportion to epsillon so [0,1]
-		float weight = (depth_old - depth_new)/(depthEpsilonOffset); //when the distance is epsillon, this should be 1.0, when it is smaller, this should be <1.0
+		float weight = (depth_old - depth_new)/(depthEpsilonOffset * (1.0+distToCamera)); //when the distance is epsillon, this should be 1.0, when it is smaller, this should be <1.0
 		
 		//The colors are blended ADDITIVELY, Buffer is 32bit --> numbers > 1 allowed!!!
 		outColor = vec4(color*weight, weight); 
 
 		outDepth = vec4(vec3(depthBuffer), 1.0);;
-		outNormal = vec4(vec3(depthBuffer), 1.0);
+		outNormal = viewNormal;
 		outPos= vec4(vec3(newDepth), 1.0);
 
 		//gl_FragDepth = newDepth; //we manually depth test and discard! //Depth Test is disabled for this renderpass

@@ -24,6 +24,7 @@ out vec3 coordinateGridPos;
 out vec3 color;
 out vec4 positionFBO;
 
+out float distToCamera;
 
 #define BACKFACE_CULLING 0
 
@@ -31,6 +32,10 @@ void main() {
 	//Normal
 	mat4 normalMatrix = transpose(inverse( viewMatrix * modelMatrix));
 	viewNormal =  normalMatrix * vec4(vNormal, 0.0); //homogenous coordinate = 0 for vectors
+
+
+	vec4 cs_position = viewMatrix * modelMatrix * vec4(vPosition, 1.0);
+    distToCamera = -cs_position.z / 10.0;
 
 	//Color
 	color = vColor;

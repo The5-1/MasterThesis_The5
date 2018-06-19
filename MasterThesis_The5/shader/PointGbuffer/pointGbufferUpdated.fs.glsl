@@ -16,6 +16,8 @@ in vec4 positionFBO;
 
 in vec3 coordinateGridPos;
 
+in float distToCamera;
+
 #define AFFINE_PROJECTED 0
 #define GAUSS_ALPHA 0
 
@@ -59,7 +61,7 @@ void main(){
 		}
 
 		//Update depth
-		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2)) * gl_FragCoord.w + depthEpsilonOffset;
+		float newDepth = gl_FragCoord.z + (pow(currentRadius, 2)) * gl_FragCoord.w + depthEpsilonOffset * (1.0+distToCamera);
 
 
 		/* BRUTE FORCE: 
@@ -69,7 +71,7 @@ void main(){
 		*/
 		outDepth = vec4(vec3(newDepth), 1.0);
 		outColor = vec4(vec3(newDepth), 1.0);
-		outNormal = vec4(vec3(newDepth), 1.0);
+		outNormal = viewNormal;
 		outPos= vec4(vec3(newDepth), 1.0);
 
 

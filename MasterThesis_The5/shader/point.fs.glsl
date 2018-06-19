@@ -9,6 +9,7 @@ layout(location = 2) out vec4 outPos;
 uniform float nearPlane;
 uniform float farPlane;
 uniform bool depthToPosTexture;
+uniform mat4 viewMatrix;
 
 in vec4 viewNormal;
 in vec4 viewPosition;
@@ -56,6 +57,12 @@ void main(){
 		//outColor = vec4(depth,1.0);
 		outColor = vec4(color, 1.0);
 
+		vec3 lightdir = vec3(1.0,2.0,-0.7);
+		vec3 lightdirV = (viewMatrix*vec4(lightdir,0.0)).xyz;
+		float NoL = max(0.0,dot(normalize(viewNormal.xyz), normalize(lightdirV)));
+		vec3 farbe = color.rgb;
+		outColor.rgb = farbe*farbe*(0.5+0.9*NoL);
+
 		if(alpha >= 1.0)
 		{
 			discard;
@@ -94,6 +101,12 @@ void main(){
 			#ifdef PHONG
 			outColor = vec4(color, 1.0) * vec4(vec3(pow(max(0.0,dot(viewNormal.xyz, lightVecV)),4.0)),1.0);
 			#endif
+
+			vec3 lightdir = vec3(1.0,2.0,-0.7);
+			vec3 lightdirV = (viewMatrix*vec4(lightdir,0.0)).xyz;
+			float NoL = max(0.0,dot(normalize(viewNormal.xyz), normalize(lightdirV)));
+			vec3 farbe = color.rgb;
+			outColor.rgb = farbe*farbe*(0.5+0.9*NoL);
 		}
 
 		
