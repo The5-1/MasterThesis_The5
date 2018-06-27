@@ -992,7 +992,7 @@ int Image::makeTexture() {
 /// Camera stuff
 cameraSystem::cameraSystem(float delta, float mouseDelta, glm::vec3 pos) : delta(delta), mouseDelta(mouseDelta) {
 	position = glm::vec4(pos, 1.0f);
-	viewDir = glm::normalize(glm::vec4(-0.92f, -0.36, -0.01, 1.0f));
+	viewDir = glm::normalize(glm::vec4(-0.24868f, -0.173f, 0.633f, 1.0f));
 	upDir    = glm::vec4(0,1, 0,0);
 	rightDir = glm::vec4(glm::normalize(glm::cross(glm::vec3(viewDir), glm::vec3(upDir))), 0.f);
 }

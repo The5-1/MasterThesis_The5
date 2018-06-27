@@ -61,7 +61,7 @@ void main(){
 		vec3 lightdirV = (viewMatrix*vec4(lightdir,0.0)).xyz;
 		float NoL = max(0.0,dot(normalize(viewNormal.xyz), normalize(lightdirV)));
 		vec3 farbe = color.rgb;
-		outColor.rgb = farbe*farbe*(0.5+0.9*NoL);
+		outColor.rgb = farbe*farbe*(0.5+0.5*NoL);
 
 		if(alpha >= 1.0)
 		{
@@ -106,7 +106,7 @@ void main(){
 			vec3 lightdirV = (viewMatrix*vec4(lightdir,0.0)).xyz;
 			float NoL = max(0.0,dot(normalize(viewNormal.xyz), normalize(lightdirV)));
 			vec3 farbe = color.rgb;
-			outColor.rgb = farbe*farbe*(0.5+0.9*NoL);
+			outColor.rgb = farbe*farbe*(0.5+0.5*NoL);
 		}
 
 		

@@ -51,7 +51,7 @@ glm::vec2 resolution = glm::vec2(1800.0f, 1000.0f);
 //Externals
 //cameraSystem cam(1.0f, 1.0f, glm::vec3(20.95f, 20.95f, -0.6f));
 //cameraSystem cam(1.0f, 1.0f, glm::vec3(2.44f, 1.41f, 0.008f));
-cameraSystem cam(1.0f, 1.0f, glm::vec3(6.36f, 2.94f, 0.05f));
+cameraSystem cam(1.0f, 1.0f, glm::vec3(0.995002f, 0.713267f, -2.39404));
 
 glm::mat4 projMatrix;
 glm::mat4 viewMatrix;

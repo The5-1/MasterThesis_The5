@@ -71,7 +71,7 @@ void main() {
 	vec3 lightdir = normalize(vec3(1.0,2.0,-0.7));
 	float NoL = max(0.0,dot(vNormal,lightdir));
 	vec3 farbe = vColor.rgb;
-	color = farbe*farbe*(0.5+0.9*NoL);
+	color = farbe*farbe*(0.5+0.5*NoL);
 
 	color = srgbToLinear(color.rgb);
 
